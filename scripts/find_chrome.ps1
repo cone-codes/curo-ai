@@ -1,8 +1,8 @@
-# Find Google Chrome on Windows. Prints full path to stdout, or exits 1.
+# Find Google Chrome on Windows. Prints full path to stdout; exit 1 if not found.
 $ErrorActionPreference = "SilentlyContinue"
 
 if ($env:CHROME_EXECUTABLE -and (Test-Path -LiteralPath $env:CHROME_EXECUTABLE)) {
-    Write-Output $env:CHROME_EXECUTABLE
+    Write-Output $env:CHROME_EXECUTABLE.Trim()
     exit 0
 }
 
@@ -24,7 +24,7 @@ foreach ($key in $regKeys) {
 }
 
 $where = & where.exe chrome 2>$null | Select-Object -First 1
-if ($where -and (Test-Path -LiteralPath $where)) {
+if ($where -and (Test-Path -LiteralPath $where.Trim())) {
     Write-Output $where.Trim()
     exit 0
 }
@@ -32,11 +32,7 @@ if ($where -and (Test-Path -LiteralPath $where)) {
 $candidates = @(
     "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe",
     "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
-    ${env:ProgramFiles(x86)} + "\Google\Chrome\Application\chrome.exe",
-    "$env:LOCALAPPDATA\Chromium\Application\chrome.exe",
-    "$env:ProgramFiles\Chromium\Application\chrome.exe",
-    "$env:LOCALAPPDATA\Google\Chrome Beta\Application\chrome.exe",
-    "$env:ProgramFiles\Google\Chrome Beta\Application\chrome.exe"
+    ${env:ProgramFiles(x86)} + "\Google\Chrome\Application\chrome.exe"
 )
 foreach ($p in $candidates) {
     if ($p -and (Test-Path -LiteralPath $p)) {
@@ -45,18 +41,5 @@ foreach ($p in $candidates) {
     }
 }
 
-# Chrome installed under user Downloads / custom (search Program Files subdirs once)
-$searchRoots = @("$env:ProgramFiles", "$env:LOCALAPPDATA")
-foreach ($root in $searchRoots) {
-    if (-not (Test-Path $root)) { continue }
-    $found = Get-ChildItem -Path $root -Filter "chrome.exe" -Recurse -Depth 5 -ErrorAction SilentlyContinue |
-        Where-Object { $_.FullName -match "Google\\Chrome\\Application\\chrome\.exe$" } |
-        Select-Object -First 1
-    if ($found) {
-        Write-Output $found.FullName
-        exit 0
-    }
-}
-
-Write-Error "Google Chrome not found."
+[Console]::Error.WriteLine("Google Chrome not found. Set CHROME_EXECUTABLE or install Chrome.")
 exit 1
