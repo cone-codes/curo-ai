@@ -75,6 +75,19 @@ SCRAPE_LIST_URL=https://www.therealreal.com/sales/shop-new-arrivals-5753
 ```
 
 
+
+## Human pacing (default)
+
+The Chrome crawler moves slowly by default (~12–28s between listings, read pauses, gradual scrolling, occasional idle breaks). Tune in `.env`:
+
+```bash
+CHROME_CRAWL_DELAY_MIN_MS=12000
+CHROME_CRAWL_DELAY_MAX_MS=28000
+CHROME_CRAWL_READ_MIN_MS=6000
+CHROME_CRAWL_READ_MAX_MS=15000
+CHROME_CRAWL_SCROLL_STEPS=8
+```
+
 ## Manual captcha / login
 
 When the crawler hits a captcha or sign-in wall, it **pauses** and prints instructions in the terminal.

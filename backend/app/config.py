@@ -50,9 +50,16 @@ class Settings(BaseSettings):
     # --- Chrome CDP bridge (your real Chrome browser) ---
     chrome_cdp_url: str = "http://127.0.0.1:9222"
     chrome_crawl_max_listings: int = 40
-    chrome_crawl_delay_min_ms: int = 4000
-    chrome_crawl_delay_max_ms: int = 9000
-    chrome_crawl_scroll_steps: int = 5
+    # Human-paced timing (between pages / listings)
+    chrome_crawl_delay_min_ms: int = 12000
+    chrome_crawl_delay_max_ms: int = 28000
+    chrome_crawl_pre_nav_min_ms: int = 3000
+    chrome_crawl_pre_nav_max_ms: int = 8000
+    chrome_crawl_read_min_ms: int = 6000
+    chrome_crawl_read_max_ms: int = 15000
+    chrome_crawl_scroll_steps: int = 8
+    chrome_crawl_scroll_pause_min_ms: int = 1800
+    chrome_crawl_scroll_pause_max_ms: int = 4200
     chrome_crawl_wait_for_manual: bool = True
     chrome_crawl_manual_wait_seconds: int = 600
     chrome_crawl_manual_poll_seconds: float = 2.0

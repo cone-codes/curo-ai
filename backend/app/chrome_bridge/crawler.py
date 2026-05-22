@@ -56,10 +56,64 @@ class ChromeCrawlResult:
 
 
 def _delay_ms() -> float:
+    """Pause between listings (main human pacing)."""
     return random.uniform(
         settings.chrome_crawl_delay_min_ms,
         settings.chrome_crawl_delay_max_ms,
     ) / 1000.0
+
+def _ms_range(min_ms: int, max_ms: int) -> float:
+    lo = min(min_ms, max_ms)
+    hi = max(min_ms, max_ms)
+    return random.uniform(lo, hi) / 1000.0
+
+
+async def _sleep_range(min_ms: int, max_ms: int) -> None:
+    await asyncio.sleep(_ms_range(min_ms, max_ms))
+
+
+async def _pre_nav_pause() -> None:
+    """Brief hesitation before navigating to the next URL."""
+    await _sleep_range(
+        settings.chrome_crawl_pre_nav_min_ms,
+        settings.chrome_crawl_pre_nav_max_ms,
+    )
+
+
+async def _read_pause() -> None:
+    """Simulate reading the page before/after scrolling."""
+    await _sleep_range(
+        settings.chrome_crawl_read_min_ms,
+        settings.chrome_crawl_read_max_ms,
+    )
+
+
+async def _scroll_pause() -> None:
+    await _sleep_range(
+        settings.chrome_crawl_scroll_pause_min_ms,
+        settings.chrome_crawl_scroll_pause_max_ms,
+    )
+
+
+async def _maybe_idle_break() -> None:
+    """Occasional longer pause (checking phone, etc.)."""
+    if random.random() < 0.18:
+        extra = random.uniform(3.0, 8.0)
+        logger.debug("Idle break %.1fs", extra)
+        await asyncio.sleep(extra)
+
+
+async def _human_mouse_wiggle(page) -> None:
+    try:
+        viewport = page.viewport_size or {"width": 1280, "height": 800}
+        w, h = viewport.get("width", 1280), viewport.get("height", 800)
+        x = random.randint(int(w * 0.2), int(w * 0.8))
+        y = random.randint(int(h * 0.15), int(h * 0.75))
+        steps = random.randint(8, 18)
+        await page.mouse.move(x, y, steps=steps)
+        await asyncio.sleep(random.uniform(0.15, 0.45))
+    except Exception:
+        pass
 
 
 def _manual_wait_labels() -> set[str]:
@@ -188,9 +242,15 @@ async def _wait_for_manual_resolution(
 
 
 async def _human_pause(page) -> None:
-    await asyncio.sleep(_delay_ms())
-    for _ in range(settings.chrome_crawl_scroll_steps):
-        delta = random.randint(200, 600)
+    """Scroll and idle on page like a shopper reading listings."""
+    await _read_pause()
+    await _human_mouse_wiggle(page)
+
+    steps = settings.chrome_crawl_scroll_steps
+    for step in range(steps):
+        delta = random.randint(120, 380)
+        if step > 0 and random.random() < 0.22:
+            delta = -random.randint(80, 220)
         try:
             await page.mouse.wheel(0, delta)
         except Exception:
@@ -198,7 +258,12 @@ async def _human_pause(page) -> None:
                 await page.evaluate(f"window.scrollBy(0, {delta})")
             except Exception:
                 pass
-        await asyncio.sleep(random.uniform(0.3, 0.9))
+        await _scroll_pause()
+        if random.random() < 0.35:
+            await _human_mouse_wiggle(page)
+
+    await _read_pause()
+    await _maybe_idle_break()
 
 
 async def _navigate_slow(page, url: str) -> tuple[str | None, str | None, str]:
@@ -207,6 +272,7 @@ async def _navigate_slow(page, url: str) -> tuple[str | None, str | None, str]:
     Waits for product shell to render before capturing HTML.
     """
     try:
+        await _pre_nav_pause()
         await page.goto(url, wait_until="load", timeout=settings.scrape_timeout_ms)
         try:
             await page.wait_for_function(
@@ -219,7 +285,7 @@ async def _navigate_slow(page, url: str) -> tuple[str | None, str | None, str]:
                 timeout=25000,
             )
         except Exception:
-            await asyncio.sleep(3)
+            await asyncio.sleep(random.uniform(4.0, 7.0))
         await _human_pause(page)
         return await _snapshot_page(page)
     except Exception as exc:
