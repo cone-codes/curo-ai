@@ -17,7 +17,6 @@ class Settings(BaseSettings):
     scrape_max_pages: int = 3
     scrape_page_size: int = 48
     scrape_list_url: str = "https://www.therealreal.com/sales/shop-new-arrivals-5753"
-    # Comma-separated extra listing URLs to rotate after the primary URL
     scrape_list_urls: str = ""
     scrape_timeout_ms: int = 90000
     scrape_headless: bool = False
@@ -34,12 +33,11 @@ class Settings(BaseSettings):
 
     scrape_use_stealth: bool = True
     scrape_persistent_profile: bool = True
+    scrape_user_data_dir: str = ""
     scrape_slow_mo_ms: int = 0
     scrape_keep_browser_open_seconds: int = 0
-    # Use installed Google Chrome instead of bundled Chromium (often better for headed mode)
     scrape_browser_channel: str = ""
 
- search weights (RRF constant k is separate)
     lexical_weight: float = 1.0
     semantic_text_weight: float = 1.0
     semantic_image_weight: float = 0.8
@@ -58,7 +56,6 @@ class Settings(BaseSettings):
         urls = [self.scrape_list_url.strip()]
         if self.scrape_list_urls.strip():
             urls.extend(u.strip() for u in self.scrape_list_urls.split(",") if u.strip())
-        # Preserve order, drop duplicates
         seen: set[str] = set()
         unique: list[str] = []
         for u in urls:
