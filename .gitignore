@@ -9,3 +9,4 @@ data/indexes/
 .pytest_cache/
 .mypy_cache/
 .DS_Store
+data/browser_profile/

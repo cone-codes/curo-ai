@@ -9,7 +9,8 @@ async function fetchHealth() {
   const res = await fetch("/api/health");
   if (!res.ok) return;
   const data = await res.json();
-  statsEl.textContent = `${data.listings} listings · index ${data.index_ready ? "ready" : "building"}`;
+  const mode = data.scrape_defaults?.headless ? "headless" : "headed";
+  statsEl.textContent = `${data.listings} listings · index ${data.index_ready ? "ready" : "building"} · scrape ${mode}`;
 }
 
 function formatPrice(listing) {
@@ -19,6 +20,31 @@ function formatPrice(listing) {
     currency: listing.currency || "USD",
     maximumFractionDigits: 0,
   }).format(listing.price);
+}
+
+function formatScrapeStatus(data) {
+  const parts = [
+    `Status: ${data.status}`,
+    `Outcome: ${data.outcome || "n/a"}`,
+    `${data.new_listings} new, ${data.total_listings} total`,
+    `${data.products_found ?? 0} products this run`,
+  ];
+  if (data.block_type) {
+    parts.push(`Block: ${data.block_type}`);
+  }
+  if (data.blocked_at_url) {
+    parts.push(`Blocked at: ${data.blocked_at_url}`);
+  }
+  if (data.pages_scraped) {
+    parts.push(`Pages scraped: ${data.pages_scraped}`);
+  }
+  if (data.used_seed_fallback) {
+    parts.push("Seed fallback used");
+  }
+  if (data.message) {
+    parts.push(data.message);
+  }
+  return parts.join(" · ");
 }
 
 function renderResults(payload) {
@@ -70,7 +96,10 @@ form.addEventListener("submit", async (e) => {
   try {
     const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
     const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || "Search failed");
+    if (!res.ok) {
+      const detail = typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail);
+      throw new Error(detail || "Search failed");
+    }
     statusLine.textContent = `${data.total} results in ${data.took_ms} ms for “${data.query}”`;
     renderResults(data);
   } catch (err) {
@@ -80,17 +109,25 @@ form.addEventListener("submit", async (e) => {
 
 rescrapeBtn.addEventListener("click", async () => {
   rescrapeBtn.disabled = true;
-  statusLine.textContent = "Scraping TheRealReal (this may take a minute)…";
+  statusLine.textContent =
+    "Scraping TheRealReal with session warmup (headed browser recommended). This may take 1–2 minutes…";
 
   try {
     const res = await fetch("/api/scrape", { method: "POST" });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || "Scrape failed");
+    const payload = data.detail && typeof data.detail === "object" ? data.detail : data;
 
-    const fallbackNote = data.used_seed_fallback
-      ? " Live scrape blocked; refreshed seed catalog."
-      : "";
-    statusLine.textContent = `Scrape ${data.status}: ${data.new_listings} new, ${data.total_listings} total.${fallbackNote}`;
+    if (!res.ok) {
+      statusLine.textContent = formatScrapeStatus(payload);
+      if (payload.block_type === "captcha") {
+        statusLine.textContent +=
+          " — Try SCRAPE_HEADLESS=false locally and complete the captcha in the browser window.";
+      }
+      await fetchHealth();
+      return;
+    }
+
+    statusLine.textContent = formatScrapeStatus(payload);
     await fetchHealth();
   } catch (err) {
     statusLine.textContent = err.message;

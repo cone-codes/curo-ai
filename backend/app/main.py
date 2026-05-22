@@ -56,6 +56,12 @@ async def health():
         "status": "ok",
         "listings": count_listings(),
         "index_ready": index_manager.ready,
+        "scrape_defaults": {
+            "headless": settings.scrape_headless,
+            "persistent_profile": settings.scrape_persistent_profile,
+            "profile_dir": str(settings.browser_profile_path()),
+            "warmup_enabled": settings.scrape_warmup_enabled,
+        },
     }
 
 
@@ -69,7 +75,22 @@ async def search(q: str = Query(..., min_length=1), limit: int = Query(default=2
 @app.post("/api/scrape", response_model=ScrapeStatus)
 async def scrape():
     result = await scrape_service.scrape()
-    index_manager.build()
+
+    if count_listings() > 0:
+        index_manager.build()
+
+    if result.status in ("blocked", "captcha_required") and not result.used_seed_fallback:
+        raise HTTPException(
+            status_code=503,
+            detail=result.model_dump(),
+        )
+
+    if result.status == "empty" and count_listings() == 0:
+        raise HTTPException(
+            status_code=503,
+            detail=result.model_dump(),
+        )
+
     return result
 
 

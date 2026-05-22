@@ -36,7 +36,14 @@ class SearchResponse(BaseModel):
 
 class ScrapeStatus(BaseModel):
     status: str
+    outcome: str
     message: str
     new_listings: int = 0
     total_listings: int = 0
     used_seed_fallback: bool = False
+    blocked: bool = False
+    block_type: str | None = None
+    pages_scraped: int = 0
+    products_found: int = 0
+    blocked_at_url: str | None = None
+    diagnostics: dict[str, Any] = Field(default_factory=dict)
