@@ -1,0 +1,64 @@
+[
+  {
+    "id": "givenchy-antigona-soft-small",
+    "url": "https://www.therealreal.com/products/givenchy-antigona-soft-small",
+    "title": "Givenchy Antigona Soft Small",
+    "description": "Structured top-handle bag in grained leather with embossed Givenchy logo and silver hardware.",
+    "designer": "Givenchy",
+    "category": "Handbags",
+    "price": 995.0,
+    "currency": "USD",
+    "condition": "Very Good",
+    "image_urls": ["https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=800&q=80"]
+  },
+  {
+    "id": "burberry-trench-coat-chelsea",
+    "url": "https://www.therealreal.com/products/burberry-trench-coat-chelsea",
+    "title": "Burberry Chelsea Heritage Trench Coat",
+    "description": "Classic double-breasted trench in honey gabardine with belted waist and epaulettes. Size UK 8.",
+    "designer": "Burberry",
+    "category": "Clothing",
+    "price": 875.0,
+    "currency": "USD",
+    "condition": "Good",
+    "size": "UK 8",
+    "image_urls": ["https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=800&q=80"]
+  },
+  {
+    "id": "omega-speedmaster-professional",
+    "url": "https://www.therealreal.com/products/omega-speedmaster-professional",
+    "title": "Omega Speedmaster Professional Moonwatch",
+    "description": "Legendary chronograph with black dial, tachymeter bezel, and stainless steel bracelet on manual-wind movement.",
+    "designer": "Omega",
+    "category": "Watches",
+    "price": 5200.0,
+    "currency": "USD",
+    "condition": "Excellent",
+    "image_urls": ["https://images.unsplash.com/photo-1523170335258-f5ed11844a49?w=800&q=80"]
+  },
+  {
+    "id": "jimmy-choo-romy-pump",
+    "url": "https://www.therealreal.com/products/jimmy-choo-romy-pump",
+    "title": "Jimmy Choo Romy 85 Glitter Pump",
+    "description": "Pointed pump in champagne glitter fabric with slim 85mm heel. Evening-ready sparkle, size 37 EU.",
+    "designer": "Jimmy Choo",
+    "category": "Shoes",
+    "price": 395.0,
+    "currency": "USD",
+    "condition": "Very Good",
+    "size": "37 EU",
+    "image_urls": ["https://images.unsplash.com/photo-1549298916-b41d501d3772?w=800&q=80"]
+  },
+  {
+    "id": "goyard-st-louis-pm-saffron",
+    "url": "https://www.therealreal.com/products/goyard-st-louis-pm-saffron",
+    "title": "Goyard St. Louis PM Saffron",
+    "description": "Lightweight coated canvas tote with chevron Goyardine pattern in saffron yellow and leather trim.",
+    "designer": "Goyard",
+    "category": "Handbags",
+    "price": 2150.0,
+    "currency": "USD",
+    "condition": "Very Good",
+    "image_urls": ["https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=800&q=80"]
+  }
+]
