@@ -104,6 +104,25 @@ async def search(q: str = Query(..., min_length=1), limit: int = Query(default=2
     return search_service.search(q.strip(), limit=limit)
 
 
+@app.get("/api/chrome/status")
+async def chrome_status():
+    from backend.app.chrome_bridge.connector import check_cdp_available, ChromeNotRunningError
+    from backend.app.config import settings
+    try:
+        info = await check_cdp_available()
+        return {"available": True, "cdp_url": settings.chrome_cdp_url, "browser": info.get("Browser", "")}
+    except ChromeNotRunningError as exc:
+        return {"available": False, "cdp_url": settings.chrome_cdp_url, "message": str(exc)}
+
+
+@app.post("/api/scrape/chrome", response_model=ScrapeStatus)
+async def scrape_chrome():
+    result = await scrape_service.scrape_via_chrome()
+    if count_listings() > 0:
+        index_manager.build()
+    return result
+
+
 @app.post("/api/scrape", response_model=ScrapeStatus)
 async def scrape():
     result = await scrape_service.scrape()

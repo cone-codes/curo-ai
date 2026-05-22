@@ -1,3 +1,7 @@
+## Quick start
+
+**Recommended:** use your real Chrome — see [docs/CHROME_CRAWLER.md](docs/CHROME_CRAWLER.md).
+
 # TheRealReal Search
 
 Hybrid search over luxury resale listings from [The RealReal](https://www.therealreal.com): **BM25 lexical** retrieval plus **multimodal semantic** search (text embeddings + CLIP image embeddings), fused with **Reciprocal Rank Fusion (RRF)**.
@@ -10,7 +14,6 @@ Hybrid search over luxury resale listings from [The RealReal](https://www.therea
 - Search API combining lexical + semantic text + semantic image channels
 - Web UI with search bar and **Re-scrape listings** button
 
-## Quick start
 
 ```bash
 python3 -m venv .venv

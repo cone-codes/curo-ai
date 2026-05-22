@@ -12,3 +12,5 @@ data/indexes/
 data/browser_profile/
 data/auth_session.json
 data/trr_cookies.json
+---
+data/html_snapshots/

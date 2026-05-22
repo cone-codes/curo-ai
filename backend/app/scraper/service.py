@@ -6,6 +6,7 @@ from backend.app.config import ROOT_DIR, SEED_LISTINGS_PATH, settings
 SEED_EXTRA_PATH = ROOT_DIR / "data" / "seed_listings_extra.json"
 
 from backend.app.models import Listing, ScrapeStatus
+from backend.app.chrome_bridge import run_chrome_crawl
 from backend.app.scraper.playwright_scraper import ScrapeRunResult, scrape_listings_async
 from backend.app.session_state import auth_status, is_session_authenticated
 from backend.app.storage import count_listings, existing_ids, load_seed_from_file, upsert_many
@@ -123,6 +124,31 @@ class ScrapeService:
             return _map_status(run, used_seed=used_seed, new_count=new_from_seed)
 
         return _map_status(run, used_seed=False, new_count=0)
+
+    async def scrape_via_chrome(self) -> ScrapeStatus:
+        known = existing_ids()
+        crawl = await run_chrome_crawl()
+        if not crawl.listings:
+            return ScrapeStatus(
+                status="empty",
+                outcome="empty",
+                message=crawl.message,
+                new_listings=0,
+                total_listings=count_listings(),
+                diagnostics=crawl.to_dict(),
+            )
+        new_from_live = [l for l in crawl.listings if l.id not in known]
+        upsert_many(crawl.listings)
+        run = ScrapeRunResult(
+            listings=crawl.listings,
+            outcome="success" if crawl.listings else "empty",
+            message=crawl.message,
+            pages_scraped=crawl.pages_visited,
+        )
+        status = _map_status(run, used_seed=False, new_count=len(new_from_live))
+        status.message = f"chrome_cdp:{crawl.message}"
+        status.diagnostics = {**status.diagnostics, **crawl.to_dict()}
+        return status
 
     def scrape_sync(self) -> ScrapeStatus:
         import asyncio

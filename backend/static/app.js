@@ -166,3 +166,33 @@ rescrapeBtn.addEventListener("click", async () => {
 });
 
 fetchHealth();
+
+
+const chromeScrapeBtn = document.getElementById("chrome-scrape-btn");
+if (chromeScrapeBtn) {
+  chromeScrapeBtn.addEventListener("click", async () => {
+    const ok = window.confirm(
+      "Scrape via YOUR Chrome:\n\n" +
+        "1. Quit Chrome, run: ./scripts/start_chrome_debug.sh\n" +
+        "2. Sign in to The RealReal in that window\n" +
+        "3. Click OK to start slow crawl (uses port 9222)\n\nContinue?"
+    );
+    if (!ok) return;
+    chromeScrapeBtn.disabled = true;
+    statusLine.textContent = "Connecting to your Chrome and crawling listings slowly…";
+    try {
+      const res = await fetch("/api/scrape/chrome", { method: "POST" });
+      const data = await res.json();
+      const payload = data.detail && typeof data.detail === "object" ? data.detail : data;
+      statusLine.textContent = formatScrapeStatus(payload);
+      if (!res.ok && payload.message) {
+        statusLine.textContent += " — " + payload.message;
+      }
+      await fetchHealth();
+    } catch (err) {
+      statusLine.textContent = err.message;
+    } finally {
+      chromeScrapeBtn.disabled = false;
+    }
+  });
+}

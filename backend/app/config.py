@@ -47,6 +47,15 @@ class Settings(BaseSettings):
     scrape_login_first: bool = True
     scrape_cookies_path: str = ""
 
+    # --- Chrome CDP bridge (your real Chrome browser) ---
+    chrome_cdp_url: str = "http://127.0.0.1:9222"
+    chrome_crawl_max_listings: int = 40
+    chrome_crawl_delay_min_ms: int = 4000
+    chrome_crawl_delay_max_ms: int = 9000
+    chrome_crawl_scroll_steps: int = 5
+
+    scrape_cookies_path: str = ""
+
     lexical_weight: float = 1.0
     semantic_text_weight: float = 1.0
     semantic_image_weight: float = 0.8
