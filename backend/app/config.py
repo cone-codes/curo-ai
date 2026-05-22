@@ -67,6 +67,9 @@ class Settings(BaseSettings):
     chrome_crawl_prefer_current_tab: bool = True
     chrome_crawl_category_scroll_rounds: int = 15
     chrome_crawl_fallback_seed_urls: bool = True
+    chrome_crawl_mode: str = "passive"
+    chrome_crawl_passive_poll_seconds: float = 3.0
+    chrome_crawl_urls_file: str = "data/crawl_urls.txt"
 
     scrape_cookies_path: str = ""
 

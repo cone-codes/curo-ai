@@ -396,7 +396,13 @@ async def _process_product_page(
     index: int,
     result: ChromeCrawlResult,
 ) -> tuple[Listing | None, str | None]:
-    html, next_raw, title = await _navigate_slow(page, url)
+    current = (page.url or "").split("?")[0].rstrip("/")
+    target = url.split("?")[0].rstrip("/")
+    if current == target:
+        await _human_pause(page)
+        html, next_raw, title = await _snapshot_page(page)
+    else:
+        html, next_raw, title = await _navigate_slow(page, url)
     result.pages_visited += 1
     if not html:
         result.errors.append(f"no_html:{url}")
@@ -443,6 +449,46 @@ async def _process_product_page(
     return None, None
 
 
+
+async def run_chrome_crawl_for_urls(product_urls: list[str]) -> ChromeCrawlResult:
+    """Visit each product URL in the user Chrome session."""
+    result = ChromeCrawlResult()
+    result.product_urls_found = len(product_urls)
+    playwright = None
+    browser = None
+    try:
+        playwright, browser, _context, default_page = await connect_to_chrome()
+    except ChromeNotRunningError as exc:
+        result.message = str(exc)
+        result.errors.append(str(exc))
+        return result
+    page = _pick_page(browser) or default_page
+    print(f"\nChrome tab: {page.url or '(empty)'}\n", flush=True)
+    if not page:
+        result.message = "no_chrome_tab"
+        result.errors.append("no_chrome_tab")
+        return result
+    try:
+        for i, url in enumerate(product_urls):
+            logger.info("Visiting (%d/%d) %s", i + 1, len(product_urls), url)
+            listing, saved_html = await _process_product_page(page, url, i, result)
+            if not listing:
+                continue
+            if saved_html:
+                _save_html(listing.id, saved_html)
+            result.html_saved += 1
+            result.listings.append(listing)
+            if i < len(product_urls) - 1:
+                await asyncio.sleep(_delay_ms())
+        result.message = "ok" if result.listings else "no_listings_parsed"
+    except Exception as exc:
+        logger.exception("Chrome crawl failed")
+        result.message = f"chrome_crawl_error:{exc}"
+        result.errors.append(str(exc))
+    finally:
+        await disconnect(playwright, browser)
+    return result
+
 async def run_chrome_crawl() -> ChromeCrawlResult:
     """
     Attach to the user's Chrome, discover product URLs, visit each slowly,
@@ -484,8 +530,8 @@ async def run_chrome_crawl() -> ChromeCrawlResult:
                     require_product=False,
                 )
                 if ok:
-                    html, _, _ = await _snapshot_page(page)
-                    product_urls = extract_product_urls_from_html(html)[
+                    await scroll_category_page(page)
+                    product_urls = (await extract_urls_combined(page))[
                         : settings.chrome_crawl_max_listings
                     ]
                     result.product_urls_found = len(product_urls)

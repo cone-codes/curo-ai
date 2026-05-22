@@ -1,197 +1,123 @@
 # Chrome crawler — Windows (full instructions)
 
-Use **Google Chrome** (not Edge). All commands run in **PowerShell** from the project root (`curo-ai`).
+Use **Google Chrome** (not Edge). All commands in **PowerShell** from project root.
 
 ---
 
-## Step 0 — Get the latest code (do this first)
+## Recommended: passive mode (most reliable)
+
+The bot does **not** navigate for you. **You** click products in Chrome; the script captures each product page.
+
+```powershell
+git pull origin cursor/therealreal-search-app-351e
+.\scripts\kill_chrome.ps1
+.\start_chrome_debug.ps1
+```
+
+In **that** Chrome window:
+
+1. Sign in at https://www.therealreal.com/
+2. Run:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+$env:PYTHONPATH = "."
+python chrome_crawler.py --passive
+```
+
+3. **Click into product pages** in Chrome (one by one or several tabs).
+4. Watch the terminal — you should see `Saved: (product title)` for each.
+5. Press **Ctrl+C** when you have enough items.
+
+Then start search:
+
+```powershell
+python run.py
+```
+
+Open http://localhost:8000
+
+---
+
+## Step 0 — Get latest code
 
 ```powershell
 cd C:\Users\CØNY\curo-ai
-git fetch origin cursor/therealreal-search-app-351e
-git checkout cursor/therealreal-search-app-351e
 git pull origin cursor/therealreal-search-app-351e
 ```
 
-If step 3 ever shows a **parser error** (`ForEach-Object`, `Missing Catch`), your script is stale. Force-replace it:
+If step 3 ever shows a PowerShell **parser error**, replace the script:
 
 ```powershell
 git checkout origin/cursor/therealreal-search-app-351e -- scripts/start_chrome_debug.ps1
 ```
 
-Or download:
-
-```powershell
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/cone-codes/curo-ai/cursor/therealreal-search-app-351e/scripts/start_chrome_debug.ps1" -OutFile ".\scripts\start_chrome_debug.ps1"
-```
-
-Verify (must print **nothing**):
-
-```powershell
-Select-String -Path .\scripts\start_chrome_debug.ps1 -Pattern "ForEach-Object"
-```
-
 ---
 
-## Step 1 — One-time setup
-
-```powershell
-cd C:\Users\CØNY\curo-ai
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-copy .env.example .env
-```
-
-If Chrome is not auto-detected, set the path from `chrome://version` → **Executable path**:
-
-```powershell
-$env:CHROME_EXECUTABLE = "C:\Program Files\Google\Chrome\Application\chrome.exe"
-```
-
-(Add the same line to `.env` as `CHROME_EXECUTABLE=...` if you want it permanent.)
-
----
-
-## Step 2 — Kill all Chrome (every session)
-
-```powershell
-.\scripts\kill_chrome.ps1
-```
-
-Wait until it says all Chrome processes stopped. If any remain, end them in **Task Manager**.
-
----
-
-## Step 3 — Start Chrome with remote debugging
-
-Run from **project root** (not from inside `scripts`):
+## Diagnose (if passive still saves nothing)
 
 ```powershell
 .\start_chrome_debug.ps1
-```
-
-You **must** see:
-
-```text
-SUCCESS - Chrome debugging is active on port 9222
-```
-
-If you see `FAILED` or a red parser error, run:
-
-```powershell
-.\scripts\diagnose_chrome_debug.ps1
-```
-
-Do **not** continue until step 3 succeeds.
-
----
-
-## Step 4 — Confirm the debug port
-
-```powershell
-.\scripts\check_chrome_debug.ps1
-```
-
-Or:
-
-```powershell
-Invoke-RestMethod http://127.0.0.1:9222/json/version
-```
-
-**Do not** use `curl` in PowerShell (it is an alias for `Invoke-WebRequest` and behaves differently).
-
----
-
-## Step 5 — Sign in to The Real Real
-
-In the **Chrome window that just opened** (profile folder: `data\chrome_cdp_profile`):
-
-1. Open https://www.therealreal.com/
-2. Sign in (Google or email)
-3. Browse to a category with products (e.g. New Arrivals)
-
-Use only this Chrome window for scraping — not your normal daily Chrome profile.
-
----
-
-
-## Still not working? Diagnose first
-
-```powershell
-.\start_chrome_debug.ps1
-# In that Chrome: sign in to TRR, open New Arrivals (products visible on screen)
+# Sign in, open ONE product page in Chrome
 $env:PYTHONPATH = "."
 python chrome_crawler.py --diagnose
 ```
 
-You need **Product links on page > 0** and **Parsed: (a title)** before the full crawl will work.
+Need: `Product links on page` or open a **product** URL directly, and `Parsed: (a title)`.
 
-## Step 6 — Crawl listings
+---
+
+## Option B: URL file
+
+Copy product URLs from Chrome (address bar), one per line in `data\crawl_urls.txt`, then:
 
 ```powershell
-.\.venv\Scripts\Activate.ps1
-$env:PYTHONPATH = "."
+python chrome_crawler.py --from-file data/crawl_urls.txt
+```
+
+---
+
+## Option C: active mode (auto-navigate)
+
+Slower and often blocked by TRR. Only if passive fails:
+
+```powershell
+$env:CHROME_CRAWL_MODE = "active"
 python chrome_crawler.py
 ```
 
-Wait until it reports listings saved and indexes rebuilt.
-
 ---
 
-## Step 7 — Start the search app
+## Start Chrome (debug port)
 
 ```powershell
-$env:PYTHONPATH = "."
-python run.py
-```
-
-Open http://localhost:8000 and search. You can also click **Scrape via my Chrome** in the UI (Chrome must still be running with step 3 active).
-
----
-
-## Quick reference (every session)
-
-```powershell
-cd C:\Users\CØNY\curo-ai
 .\scripts\kill_chrome.ps1
-.\start_chrome_debug.ps1          # wait for SUCCESS
+.\start_chrome_debug.ps1
+```
+
+Must show: `SUCCESS - Chrome debugging is active on port 9222`
+
+```powershell
 .\scripts\check_chrome_debug.ps1
-# sign in to TRR in that Chrome window
-.\.venv\Scripts\Activate.ps1
-$env:PYTHONPATH = "."
-python chrome_crawler.py
-python run.py
 ```
 
 ---
 
 ## Troubleshooting
 
-### "No listings parsed" but pages were visited
-
-The crawler **opened** product URLs but could not read title/price from the HTML. Check the new error lines, e.g.:
-
-| Error in output | Meaning | Fix |
-|-----------------|---------|-----|
-| `login_required:...` | Not signed in on that Chrome profile | Sign in at therealreal.com in the debug Chrome window |
-| `captcha:...` | PerimeterX challenge | Complete "Press & Hold" in that Chrome window, then re-run |
-| `page_not_ready:...` | Page captured before React finished | `git pull` (longer wait), re-run crawler |
-| `parse_failed:no_product_fields:...` | HTML has no product JSON/meta | Open `data/html_snapshots/failed_*.html` — if blank or wrong page, sign in first |
-
 | Problem | Fix |
 |---------|-----|
-| Parser error, `ForEach-Object`, `Missing Catch` | Step 0 — replace `start_chrome_debug.ps1` |
-| `Google Chrome not found` | Set `$env:CHROME_EXECUTABLE` from `chrome://version` |
-| `FAILED - port 9222` | `kill_chrome.ps1`, wait 5s, run `start_chrome_debug.ps1` again |
-| Scripts disabled | Use `.\start_chrome_debug.ps1` from project root |
-| Port check fails but Chrome is open | You may have opened normal Chrome; use only the script’s window / `data\chrome_cdp_profile` |
+| Cannot reach port 9222 | `kill_chrome.ps1`, `start_chrome_debug.ps1` again |
+| Passive shows "Waiting..." forever | Click a **product** page (URL contains `/products/.../...`) |
+| Parsed FAILED on diagnose | Complete captcha / sign-in in debug Chrome |
+| No listings after crawl | Use `--passive` and confirm `Saved:` lines in terminal |
 
 ---
 
-## CMD fallback
+## .env
 
-```cmd
-cd C:\Users\CØNY\curo-ai
-start_chrome_debug.bat
+```env
+CHROME_CDP_URL=http://127.0.0.1:9222
+CHROME_CRAWL_MODE=passive
+CHROME_CRAWL_PASSIVE_POLL_SECONDS=3
 ```
