@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     scrape_login_wait_seconds: int = 180
     scrape_open_landing_on_no_new: bool = True
     scrape_retry_after_sign_in: bool = True
+    scrape_prefer_google_sign_in: bool = True
 
     lexical_weight: float = 1.0
     semantic_text_weight: float = 1.0

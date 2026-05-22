@@ -105,6 +105,7 @@ async def ensure_logged_in(
             )
         except Exception as exc:
             return False, f"login_navigation_failed:{exc}"
+        await _try_open_google_sign_in(page)
     else:
         landing_url = settings.scrape_home_url
         logger.info("Landing tab ready for sign-in: %s", landing_url)
@@ -117,6 +118,8 @@ async def ensure_logged_in(
                 )
             except Exception as exc:
                 return False, f"landing_navigation_failed:{exc}"
+        await _try_open_sign_in_modal(page)
+        await _try_open_google_sign_in(page)
 
     wait_seconds = settings.scrape_login_wait_seconds
     logger.info(
@@ -135,3 +138,55 @@ async def ensure_logged_in(
         await asyncio.sleep(2.0)
 
     return False, "login_timeout: sign in via the browser before time runs out"
+
+
+async def _try_open_sign_in_modal(page: Page) -> None:
+    """Open TRR sign-in modal from the homepage if needed."""
+    for selector in (
+        'a:has-text("Sign In")',
+        'button:has-text("Sign In")',
+        '[data-testid="sign-in"]',
+    ):
+        try:
+            el = page.locator(selector).first
+            if await el.is_visible(timeout=1500):
+                await el.click(timeout=3000)
+                await asyncio.sleep(1.0)
+                return
+        except Exception:
+            continue
+
+
+async def _try_open_google_sign_in(page: Page) -> None:
+    """Click Continue with Google — user completes Google OAuth in the browser."""
+    if not settings.scrape_prefer_google_sign_in:
+        return
+
+    selectors = [
+        'button:has-text("Continue with Google")',
+        'button:has-text("Google")',
+        '[data-testid*="google" i]',
+        'div[role="button"]:has-text("Google")',
+    ]
+    for selector in selectors:
+        try:
+            btn = page.locator(selector).first
+            if not await btn.is_visible(timeout=2000):
+                continue
+            logger.info("Clicking Google sign-in for The RealReal")
+            try:
+                async with page.expect_popup(timeout=8000) as popup_info:
+                    await btn.click(timeout=5000)
+                popup = await popup_info.value
+                await popup.wait_for_load_state("domcontentloaded", timeout=15000)
+                logger.info(
+                    "Google sign-in popup opened — complete login there, then return to TRR."
+                )
+            except Exception:
+                await btn.click(timeout=5000)
+                logger.info("Google sign-in started — complete login in this tab or popup.")
+            await asyncio.sleep(1.5)
+            return
+        except Exception:
+            continue
+
