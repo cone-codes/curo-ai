@@ -74,6 +74,17 @@ CHROME_CRAWL_DELAY_MAX_MS=9000
 SCRAPE_LIST_URL=https://www.therealreal.com/sales/shop-new-arrivals-5753
 ```
 
+
+## Manual captcha / login
+
+When the crawler hits a captcha or sign-in wall, it **pauses** and prints instructions in the terminal.
+Complete the challenge or sign in **in your debug Chrome window**; the crawl resumes automatically when the page is ready (default: up to 10 minutes).
+
+```bash
+CHROME_CRAWL_WAIT_FOR_MANUAL=true
+CHROME_CRAWL_MANUAL_WAIT_SECONDS=600
+```
+
 ## Troubleshooting
 
 | Problem | Fix |

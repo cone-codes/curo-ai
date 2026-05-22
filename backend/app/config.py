@@ -53,6 +53,10 @@ class Settings(BaseSettings):
     chrome_crawl_delay_min_ms: int = 4000
     chrome_crawl_delay_max_ms: int = 9000
     chrome_crawl_scroll_steps: int = 5
+    chrome_crawl_wait_for_manual: bool = True
+    chrome_crawl_manual_wait_seconds: int = 600
+    chrome_crawl_manual_poll_seconds: float = 2.0
+    chrome_crawl_manual_wait_for: str = "captcha,login_required,blocked,page_not_ready"
 
     scrape_cookies_path: str = ""
 

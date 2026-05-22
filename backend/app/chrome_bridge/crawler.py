@@ -5,8 +5,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
+import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +24,14 @@ logger = logging.getLogger(__name__)
 
 HTML_CACHE_DIR = DATA_DIR / "html_snapshots"
 
+_ISSUE_HINTS = {
+    "captcha": "Complete the 'Press & Hold' or other challenge in the Chrome window.",
+    "login_required": "Sign in to The RealReal in the Chrome window (Google or email).",
+    "blocked": "Page was blocked. Try refreshing or signing in again in Chrome.",
+    "page_not_ready": "Wait for the product or category page to finish loading.",
+    "no_product_urls": "Open a TRR category with products visible (e.g. New Arrivals).",
+}
+
 
 @dataclass
 class ChromeCrawlResult:
@@ -31,6 +39,7 @@ class ChromeCrawlResult:
     product_urls_found: int = 0
     pages_visited: int = 0
     html_saved: int = 0
+    manual_waits: int = 0
     errors: list[str] = field(default_factory=list)
     message: str = "ok"
 
@@ -40,6 +49,7 @@ class ChromeCrawlResult:
             "product_urls_found": self.product_urls_found,
             "pages_visited": self.pages_visited,
             "html_saved": self.html_saved,
+            "manual_waits": self.manual_waits,
             "errors": self.errors[:10],
             "message": self.message,
         }
@@ -52,6 +62,36 @@ def _delay_ms() -> float:
     ) / 1000.0
 
 
+def _manual_wait_labels() -> set[str]:
+    raw = (settings.chrome_crawl_manual_wait_for or "").strip()
+    if not raw:
+        return {"captcha", "login_required", "blocked", "page_not_ready"}
+    return {part.strip() for part in raw.split(",") if part.strip()}
+
+
+def _should_wait_for_label(label: str) -> bool:
+    return settings.chrome_crawl_wait_for_manual and label in _manual_wait_labels()
+
+
+def _print_manual_prompt(label: str, url: str, timeout_s: int) -> None:
+    hint = _ISSUE_HINTS.get(label, "Fix the issue in the Chrome window.")
+    lines = [
+        "",
+        "=" * 60,
+        "ACTION REQUIRED — complete this in your Chrome window",
+        "=" * 60,
+        f"  Issue:   {label}",
+        f"  URL:     {url or '(current tab)'}",
+        f"  Hint:    {hint}",
+        f"  Timeout: {timeout_s}s (crawler polls until resolved)",
+        "=" * 60,
+        "",
+    ]
+    msg = "\n".join(lines)
+    print(msg, flush=True)
+    logger.info("Waiting for manual fix: %s at %s", label, url)
+
+
 def _pick_page(browser):
     """Prefer a tab already on therealreal.com."""
     for context in browser.contexts:
@@ -61,6 +101,90 @@ def _pick_page(browser):
     if browser.contexts and browser.contexts[0].pages:
         return browser.contexts[0].pages[0]
     return None
+
+
+async def _snapshot_page(page) -> tuple[str, str | None, str]:
+    title = await page.title()
+    html = await page.content()
+    next_raw = None
+    try:
+        next_raw = await page.evaluate(
+            "() => document.getElementById('__NEXT_DATA__')?.textContent || null"
+        )
+    except Exception:
+        pass
+    return html, next_raw, title
+
+
+async def _bring_chrome_forward(page) -> None:
+    try:
+        await page.bring_to_front()
+    except Exception:
+        pass
+
+
+def _page_is_product_ready(
+    html: str, url: str, next_raw: str | None, title: str
+) -> bool:
+    if detect_page_issue(html, title):
+        return False
+    return parse_product_html(html, url, next_data_raw=next_raw, page_title=title) is not None
+
+
+async def _wait_for_manual_resolution(
+    page,
+    url: str,
+    label: str,
+    *,
+    require_product: bool = True,
+) -> tuple[str, str | None, str, bool]:
+    """
+    Block until the user fixes captcha/login/etc. in Chrome.
+    Returns (html, next_raw, title, resolved).
+    """
+    if not _should_wait_for_label(label):
+        html, next_raw, title = await _snapshot_page(page)
+        return html, next_raw, title, False
+
+    timeout_s = settings.chrome_crawl_manual_wait_seconds
+    poll_s = settings.chrome_crawl_manual_poll_seconds
+    _print_manual_prompt(label, url, timeout_s)
+    await _bring_chrome_forward(page)
+
+    deadline = time.monotonic() + timeout_s
+    last_label = label
+    html, next_raw, title = await _snapshot_page(page)
+
+    while time.monotonic() < deadline:
+        await asyncio.sleep(poll_s)
+        html, next_raw, title = await _snapshot_page(page)
+        issue = detect_page_issue(html, title)
+
+        if require_product:
+            if _page_is_product_ready(html, url, next_raw, title):
+                print("\n[OK] Page ready — continuing crawl.\n", flush=True)
+                return html, next_raw, title, True
+            if issue:
+                last_label = issue
+            elif parse_failure_reason(html, url, next_data_raw=next_raw, page_title=title) in (
+                "page_not_ready",
+                "no_product_fields",
+            ):
+                last_label = "page_not_ready"
+        else:
+            if not issue and extract_product_urls_from_html(html):
+                print("\n[OK] Product links visible — continuing crawl.\n", flush=True)
+                return html, next_raw, title, True
+            if issue:
+                last_label = issue
+
+        # Periodic reminder every ~30s
+        elapsed = int(time.monotonic() - (deadline - timeout_s))
+        if elapsed > 0 and elapsed % 30 == 0:
+            print(f"  ... still waiting ({elapsed}s) — {last_label}", flush=True)
+
+    print(f"\n[TIMEOUT] Manual wait expired after {timeout_s}s.\n", flush=True)
+    return html, next_raw, title, False
 
 
 async def _human_pause(page) -> None:
@@ -97,16 +221,7 @@ async def _navigate_slow(page, url: str) -> tuple[str | None, str | None, str]:
         except Exception:
             await asyncio.sleep(3)
         await _human_pause(page)
-        title = await page.title()
-        html = await page.content()
-        next_raw = None
-        try:
-            next_raw = await page.evaluate(
-                "() => document.getElementById('__NEXT_DATA__')?.textContent || null"
-            )
-        except Exception:
-            pass
-        return html, next_raw, title
+        return await _snapshot_page(page)
     except Exception as exc:
         logger.warning("Navigation failed %s: %s", url, exc)
         return None, None, ""
@@ -119,14 +234,37 @@ def _save_html(name: str, html: str) -> Path:
     return path
 
 
-async def _collect_listing_urls(page) -> list[str]:
+async def _extract_urls_with_manual_wait(page, list_url: str) -> list[str]:
+    html, next_raw, title = await _navigate_slow(page, list_url)
+    if not html:
+        return []
+
+    issue = detect_page_issue(html, title)
+    if issue and _should_wait_for_label(issue):
+        html, next_raw, title, ok = await _wait_for_manual_resolution(
+            page, list_url, issue, require_product=False
+        )
+        if not ok:
+            return []
+
+    found = extract_product_urls_from_html(html)
+    if found:
+        return found
+
+    if _should_wait_for_label("no_product_urls"):
+        html, next_raw, title, ok = await _wait_for_manual_resolution(
+            page, list_url, "no_product_urls", require_product=False
+        )
+        if ok:
+            return extract_product_urls_from_html(html)
+    return []
+
+
+async def _collect_listing_urls(page, result: ChromeCrawlResult) -> list[str]:
     urls: list[str] = []
     seed_pages = settings.listing_urls()
     for list_url in seed_pages[: max(1, settings.scrape_max_pages)]:
-        html, _, _ = await _navigate_slow(page, list_url)
-        if not html:
-            continue
-        found = extract_product_urls_from_html(html)
+        found = await _extract_urls_with_manual_wait(page, list_url)
         logger.info("Category %s -> %d product links", list_url, len(found))
         urls.extend(found)
         await asyncio.sleep(_delay_ms())
@@ -137,6 +275,59 @@ async def _collect_listing_urls(page) -> list[str]:
             seen.add(u)
             unique.append(u)
     return unique[: settings.chrome_crawl_max_listings]
+
+
+async def _process_product_page(
+    page,
+    url: str,
+    index: int,
+    result: ChromeCrawlResult,
+) -> tuple[Listing | None, str | None]:
+    html, next_raw, title = await _navigate_slow(page, url)
+    result.pages_visited += 1
+    if not html:
+        result.errors.append(f"no_html:{url}")
+        return None, None
+
+    issue = detect_page_issue(html, title)
+    if issue:
+        _save_html(f"failed_{index}_{issue}", html)
+        if _should_wait_for_label(issue):
+            result.manual_waits += 1
+            html, next_raw, title, ok = await _wait_for_manual_resolution(
+                page, url, issue, require_product=True
+            )
+            if not ok:
+                result.errors.append(f"{issue}_timeout:{url}")
+                return None, None
+        else:
+            result.errors.append(f"{issue}:{url}")
+            return None, None
+
+    listing = parse_product_html(html, url, next_data_raw=next_raw, page_title=title)
+    if listing:
+        return listing, html
+
+    reason = parse_failure_reason(html, url, next_data_raw=next_raw, page_title=title)
+    _save_html(f"failed_{index}_{reason}", html)
+
+    if _should_wait_for_label(reason):
+        result.manual_waits += 1
+        html, next_raw, title, ok = await _wait_for_manual_resolution(
+            page, url, reason, require_product=True
+        )
+        if ok:
+            listing = parse_product_html(
+                html, url, next_data_raw=next_raw, page_title=title
+            )
+            if listing:
+                return listing, html
+        result.errors.append(f"parse_failed:{reason}_timeout:{url}")
+    else:
+        result.errors.append(f"parse_failed:{reason}:{url}")
+
+    logger.warning("Parse failed (%s) %s", reason, url)
+    return None, None
 
 
 async def run_chrome_crawl() -> ChromeCrawlResult:
@@ -162,9 +353,28 @@ async def run_chrome_crawl() -> ChromeCrawlResult:
         return result
 
     try:
-        product_urls = await _collect_listing_urls(page)
+        product_urls = await _collect_listing_urls(page, result)
         result.product_urls_found = len(product_urls)
         logger.info("Found %d product URLs in Chrome", len(product_urls))
+
+        if not product_urls:
+            if settings.chrome_crawl_wait_for_manual and _should_wait_for_label(
+                "no_product_urls"
+            ):
+                result.manual_waits += 1
+                current_url = page.url or settings.scrape_list_url
+                _, _, _, ok = await _wait_for_manual_resolution(
+                    page,
+                    current_url,
+                    "no_product_urls",
+                    require_product=False,
+                )
+                if ok:
+                    html, _, _ = await _snapshot_page(page)
+                    product_urls = extract_product_urls_from_html(html)[
+                        : settings.chrome_crawl_max_listings
+                    ]
+                    result.product_urls_found = len(product_urls)
 
         if not product_urls:
             result.message = "no_product_urls_found_sign_in_and_open_category_in_chrome"
@@ -172,32 +382,12 @@ async def run_chrome_crawl() -> ChromeCrawlResult:
 
         for i, url in enumerate(product_urls):
             logger.info("Visiting (%d/%d) %s", i + 1, len(product_urls), url)
-            html, next_raw, title = await _navigate_slow(page, url)
-            result.pages_visited += 1
-            if not html:
-                result.errors.append(f"no_html:{url}")
-                continue
-
-            issue = detect_page_issue(html, title)
-            if issue:
-                _save_html(f"failed_{i}_{issue}", html)
-                result.errors.append(f"{issue}:{url}")
-                logger.warning("Page issue %s at %s", issue, url)
-                continue
-
-            listing = parse_product_html(
-                html, url, next_data_raw=next_raw, page_title=title
-            )
+            listing, saved_html = await _process_product_page(page, url, i, result)
             if not listing:
-                reason = parse_failure_reason(
-                    html, url, next_data_raw=next_raw, page_title=title
-                )
-                _save_html(f"failed_{i}_{reason}", html)
-                result.errors.append(f"parse_failed:{reason}:{url}")
-                logger.warning("Parse failed (%s) %s", reason, url)
                 continue
 
-            _save_html(listing.id, html)
+            if saved_html:
+                _save_html(listing.id, saved_html)
             result.html_saved += 1
             result.listings.append(listing)
 
