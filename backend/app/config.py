@@ -1,6 +1,5 @@
 from pathlib import Path
 
-from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
@@ -35,9 +34,12 @@ class Settings(BaseSettings):
 
     scrape_use_stealth: bool = True
     scrape_persistent_profile: bool = True
-    scrape_user_data_dir: str = ""
+    scrape_slow_mo_ms: int = 0
+    scrape_keep_browser_open_seconds: int = 0
+    # Use installed Google Chrome instead of bundled Chromium (often better for headed mode)
+    scrape_browser_channel: str = ""
 
-    # Hybrid search weights (RRF constant k is separate)
+ search weights (RRF constant k is separate)
     lexical_weight: float = 1.0
     semantic_text_weight: float = 1.0
     semantic_image_weight: float = 0.8

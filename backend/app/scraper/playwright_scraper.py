@@ -361,10 +361,26 @@ async def scrape_listings_async() -> ScrapeRunResult:
         browser = None
         profile_dir = settings.browser_profile_path()
 
+        slow_mo = settings.scrape_slow_mo_ms
+        if not settings.scrape_headless and slow_mo <= 0:
+            slow_mo = 250
+
         launch_kwargs: dict[str, Any] = {
             "headless": settings.scrape_headless,
             "args": ["--disable-blink-features=AutomationControlled"],
         }
+        if slow_mo > 0:
+            launch_kwargs["slow_mo"] = slow_mo
+        if settings.scrape_browser_channel.strip():
+            launch_kwargs["channel"] = settings.scrape_browser_channel.strip()
+
+        logger.info(
+            "Launching browser headless=%s slow_mo=%s channel=%s profile=%s",
+            settings.scrape_headless,
+            slow_mo,
+            settings.scrape_browser_channel or "chromium",
+            profile_dir,
+        )
 
         if settings.scrape_persistent_profile:
             profile_dir.mkdir(parents=True, exist_ok=True)
@@ -461,7 +477,15 @@ async def scrape_listings_async() -> ScrapeRunResult:
     return result
 
 
+async def _hold_browser_open_for_inspection() -> None:
+    seconds = settings.scrape_keep_browser_open_seconds
+    if seconds > 0:
+        logger.info("Keeping browser open for %s seconds (SCRAPE_KEEP_BROWSER_OPEN_SECONDS)", seconds)
+        await asyncio.sleep(seconds)
+
+
 async def _close(context, browser) -> None:
+    await _hold_browser_open_for_inspection()
     try:
         if context:
             await context.close()

@@ -61,6 +61,8 @@ async def health():
             "persistent_profile": settings.scrape_persistent_profile,
             "profile_dir": str(settings.browser_profile_path()),
             "warmup_enabled": settings.scrape_warmup_enabled,
+            "slow_mo_ms": settings.scrape_slow_mo_ms,
+            "keep_browser_open_seconds": settings.scrape_keep_browser_open_seconds,
         },
     }
 
