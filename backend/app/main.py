@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
+from pydantic import BaseModel
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -54,6 +55,20 @@ async def home():
 @app.get("/api/auth/status")
 async def get_auth_status():
     return auth_status()
+
+
+class CookieImportBody(BaseModel):
+    cookies: list[dict]
+
+
+@app.post("/api/auth/cookies")
+async def import_cookies(body: CookieImportBody):
+    """Import browser cookies (Playwright format) from a logged-in TRR session."""
+    from backend.app.scraper.cookies import save_cookies_to_file
+    if not body.cookies:
+        raise HTTPException(status_code=400, detail="No cookies provided")
+    save_cookies_to_file(body.cookies)
+    return {"status": "ok", "count": len(body.cookies), "message": "Cookies saved. Try Re-scrape."}
 
 
 @app.post("/api/auth/clear")

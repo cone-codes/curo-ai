@@ -108,3 +108,14 @@ data/seed_listings.json
 data/browser_profile/ # persistent Playwright profile (gitignored)
 run.py
 ```
+
+## Troubleshooting live scrape
+
+If Re-scrape fails silently, check the status line for `blocked`, `login_required`, or `warmup_blocked`.
+
+1. Set `SCRAPE_HEADLESS=false` and `SCRAPE_FALLBACK_TO_SEED=false`
+2. Click **Re-scrape** — sign in with Google or email in the browser window (wait up to 3 min)
+3. Optional: export cookies from a logged-in browser session to `data/trr_cookies.json` (Playwright format) or `POST /api/auth/cookies`
+4. Use `SCRAPE_BROWSER_CHANNEL=chrome` to reuse your normal Chrome profile path via `SCRAPE_USER_DATA_DIR`
+
+Bot protection often blocks the site **before** login — the app now opens the login page **first**, not the homepage warmup.

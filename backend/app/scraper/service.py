@@ -108,7 +108,11 @@ class ScrapeService:
                 )
             return status
 
-        if settings.scrape_fallback_to_seed and SEED_LISTINGS_PATH.exists():
+        if (
+            settings.scrape_fallback_to_seed
+            and SEED_LISTINGS_PATH.exists()
+            and run.outcome not in ("login_required", "blocked", "captcha")
+        ):
             _, new_from_seed = _apply_seed_fallback(known)
             used_seed = True
             run.message = (

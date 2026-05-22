@@ -20,10 +20,10 @@ class Settings(BaseSettings):
     scrape_list_urls: str = ""
     scrape_timeout_ms: int = 90000
     scrape_headless: bool = False
-    scrape_fallback_to_seed: bool = True
+    scrape_fallback_to_seed: bool = False
     scrape_stop_on_block: bool = True
 
-    scrape_warmup_enabled: bool = True
+    scrape_warmup_enabled: bool = False
     scrape_home_url: str = "https://www.therealreal.com/"
     scrape_warmup_delay_min_ms: int = 2500
     scrape_warmup_delay_max_ms: int = 5000
@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     scrape_persistent_profile: bool = True
     scrape_user_data_dir: str = ""
     scrape_slow_mo_ms: int = 0
-    scrape_keep_browser_open_seconds: int = 0
+    scrape_keep_browser_open_seconds: int = 120
     scrape_browser_channel: str = ""
 
     scrape_require_login: bool = True
@@ -44,6 +44,8 @@ class Settings(BaseSettings):
     scrape_open_landing_on_no_new: bool = True
     scrape_retry_after_sign_in: bool = True
     scrape_prefer_google_sign_in: bool = True
+    scrape_login_first: bool = True
+    scrape_cookies_path: str = ""
 
     lexical_weight: float = 1.0
     semantic_text_weight: float = 1.0

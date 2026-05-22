@@ -11,3 +11,4 @@ data/indexes/
 .DS_Store
 data/browser_profile/
 data/auth_session.json
+data/trr_cookies.json

@@ -14,7 +14,13 @@ from urllib.parse import urljoin, urlparse
 
 from backend.app.config import settings
 from backend.app.models import Listing
-from backend.app.scraper.login import detect_logged_in, ensure_logged_in, open_landing_tab
+from backend.app.scraper.login import (
+    detect_logged_in,
+    ensure_logged_in,
+    open_landing_tab,
+    _try_open_google_sign_in,
+    _try_open_sign_in_modal,
+)
 from backend.app.scraper.stealth import STEALTH_INIT_SCRIPT
 
 logger = logging.getLogger(__name__)
@@ -403,6 +409,50 @@ async def _collect_listings_from_urls(
     return _dedupe(all_listings)
 
 
+
+async def _save_context_cookies(context) -> None:
+    try:
+        from backend.app.scraper.cookies import save_cookies_to_file
+        cookies = await context.cookies()
+        if cookies:
+            save_cookies_to_file(cookies)
+    except Exception as exc:
+        logger.debug("Could not save cookies: %s", exc)
+
+
+async def _run_login_flow(context, page, result: ScrapeRunResult) -> tuple[bool, str]:
+    if not settings.scrape_require_login:
+        return True, "login_not_required"
+    if settings.scrape_headless:
+        result.outcome = "login_required"
+        result.message = "SCRAPE_HEADLESS=false required to sign in"
+        result.opened_sign_in_tab = True
+        result.sign_in_landing_url = settings.scrape_home_url
+        return False, result.message
+    if await detect_logged_in(page):
+        return True, "already_logged_in"
+    result.opened_sign_in_tab = True
+    result.sign_in_landing_url = settings.scrape_home_url
+    try:
+        await page.goto(settings.scrape_login_url, wait_until="domcontentloaded", timeout=settings.scrape_timeout_ms)
+    except Exception as exc:
+        logger.warning("Login URL navigation: %s", exc)
+    await _try_open_google_sign_in(page)
+    login_ok, login_message = await ensure_logged_in(page, interactive=True)
+    if login_ok:
+        return True, login_message
+    sign_in_tab = await open_landing_tab(context)
+    await _try_open_sign_in_modal(sign_in_tab)
+    await _try_open_google_sign_in(sign_in_tab)
+    login_ok, login_message = await ensure_logged_in(sign_in_tab, interactive=True, use_landing_page=True)
+    if login_ok:
+        return True, login_message
+    result.outcome = "login_required"
+    result.message = login_message
+    result.blocked_at_url = settings.scrape_login_url
+    return False, login_message
+
+
 async def scrape_listings_async(known_ids: set[str] | None = None) -> ScrapeRunResult:
     from playwright.async_api import async_playwright
 
@@ -463,25 +513,26 @@ async def scrape_listings_async(known_ids: set[str] | None = None) -> ScrapeRunR
 
         await _apply_stealth(page)
 
-        warmup_block = await _warm_session(page)
-        if warmup_block:
-            result.block_type = warmup_block
-            result.blocked_at_url = settings.scrape_home_url
-            result.outcome = "captcha" if warmup_block == "captcha" else "blocked"
-            result.message = f"warmup_{warmup_block}"
+        from backend.app.scraper.cookies import apply_cookies_to_context
+        from pathlib import Path as _Path
+
+        cookie_path = (
+            _Path(settings.scrape_cookies_path).expanduser()
+            if settings.scrape_cookies_path.strip()
+            else None
+        )
+        await apply_cookies_to_context(context, cookie_path)
+
+        # Login BEFORE scraping (warmup often hits bot wall while logged out)
+        login_ok, login_message = await _run_login_flow(context, page, result)
+        if not login_ok:
             await _close(context, browser)
             return result
 
-        already_logged_in = await detect_logged_in(page)
-        login_ok, login_message = await ensure_logged_in(
-            page, interactive=not already_logged_in
-        )
-        if not login_ok:
-            result.outcome = "login_required"
-            result.message = login_message
-            result.blocked_at_url = settings.scrape_login_url
-            await _close(context, browser)
-            return result
+        if settings.scrape_warmup_enabled:
+            warmup_block = await _warm_session(page)
+            if warmup_block and not await detect_logged_in(page):
+                logger.warning("Warmup blocked (%s) but continuing after login", warmup_block)
 
         all_listings = await _collect_listings_from_urls(
             page, listing_urls, pages_budget, result
@@ -515,6 +566,7 @@ async def scrape_listings_async(known_ids: set[str] | None = None) -> ScrapeRunR
                 result.message = login_message
                 result.outcome = "login_required"
 
+        await _save_context_cookies(context)
         await _close(context, browser)
 
     result.listings = _dedupe(all_listings)
