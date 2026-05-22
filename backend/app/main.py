@@ -83,7 +83,7 @@ async def health():
     return {
         "status": "ok",
         "listings": count_listings(),
-            "scrapfly_configured": bool(settings.scrapfly_api_key.strip()),
+        "scrapfly_configured": bool(settings.scrapfly_api_key.strip()),
         "index_ready": index_manager.ready,
         "scrape_defaults": {
             "headless": settings.scrape_headless,
