@@ -12,12 +12,10 @@ $regKeys = @(
 )
 foreach ($key in $regKeys) {
     try {
-        $item = Get-Item -LiteralPath $key
-        $path = $item.GetValue("")
-        if (-not $path) { $path = $item.(Get-ItemProperty -LiteralPath $key | Select-Object -ExpandProperty "(default)" -ErrorAction SilentlyContinue) }
+        $path = (Get-ItemProperty -LiteralPath $key -ErrorAction Stop).'(default)'
         if ($path) {
-            $path = $path.Trim('"').Split('"')[0]
-            if ($path -and (Test-Path -LiteralPath $path)) {
+            $path = "$path".Trim().Trim('"')
+            if (Test-Path -LiteralPath $path) {
                 Write-Output $path
                 exit 0
             }
