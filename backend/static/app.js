@@ -196,3 +196,30 @@ if (chromeScrapeBtn) {
     }
   });
 }
+
+const scrapflyScrapeBtn = document.getElementById("scrapfly-scrape-btn");
+if (scrapflyScrapeBtn) {
+  scrapflyScrapeBtn.addEventListener("click", async () => {
+    const ok = window.confirm(
+      "Scrape via ScrapFly (cloud API):\n\n" +
+        "Requires SCRAPFLY_API_KEY in .env. Uses API credits (~30+ per page).\n\nContinue?"
+    );
+    if (!ok) return;
+    scrapflyScrapeBtn.disabled = true;
+    statusLine.textContent = "ScrapFly crawl in progress (may take several minutes)…";
+    try {
+      const res = await fetch("/api/scrape/scrapfly", { method: "POST" });
+      const data = await res.json();
+      const payload = data.detail && typeof data.detail === "object" ? data.detail : data;
+      statusLine.textContent = formatScrapeStatus(payload);
+      if (!res.ok && payload.message) {
+        statusLine.textContent += " — " + payload.message;
+      }
+      await fetchHealth();
+    } catch (err) {
+      statusLine.textContent = err.message;
+    } finally {
+      scrapflyScrapeBtn.disabled = false;
+    }
+  });
+}

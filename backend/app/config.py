@@ -71,6 +71,20 @@ class Settings(BaseSettings):
     chrome_crawl_passive_poll_seconds: float = 3.0
     chrome_crawl_urls_file: str = "data/crawl_urls.txt"
 
+    # --- ScrapFly (cloud scrape API — bypasses PerimeterX) ---
+    scrapfly_api_key: str = ""
+    scrapfly_country: str = "us"
+    scrapfly_asp: bool = True
+    scrapfly_render_js: bool = True
+    scrapfly_proxy_pool: str = "public_residential_pool"
+    scrapfly_auto_scroll: bool = True
+    scrapfly_cost_budget: int = 50
+    scrapfly_max_listings: int = 40
+    scrapfly_delay_seconds: float = 2.0
+    scrapfly_session: str = "trr-scrape"
+    scrapfly_use_cookies_file: bool = True
+    scrapfly_cookies_path: str = ""
+
     scrape_cookies_path: str = ""
 
     lexical_weight: float = 1.0
