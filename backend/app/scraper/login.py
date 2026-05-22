@@ -6,15 +6,17 @@ import asyncio
 import logging
 import re
 
+from playwright.async_api import BrowserContext, Page
+
 from backend.app.config import settings
-from backend.app.session_state import is_session_authenticated, mark_session_authenticated
+from backend.app.session_state import mark_session_authenticated
 
 logger = logging.getLogger(__name__)
 
 SIGN_IN_PATTERN = re.compile(r"sign\s*in", re.I)
 
 
-async def detect_logged_in(page) -> bool:
+async def detect_logged_in(page: Page) -> bool:
     """Best-effort check whether the browser appears authenticated."""
     try:
         sign_out = page.get_by_role("link", name=re.compile(r"sign\s*out|log\s*out", re.I))
@@ -46,12 +48,34 @@ async def detect_logged_in(page) -> bool:
     return False
 
 
-async def ensure_logged_in(page, *, interactive: bool) -> tuple[bool, str]:
+async def open_landing_tab(context: BrowserContext) -> Page:
+    """Open The RealReal default landing page in a new browser tab."""
+    landing_url = settings.scrape_home_url
+    tab = await context.new_page()
+    try:
+        await tab.bring_to_front()
+    except Exception:
+        pass
+    logger.info("Opened landing page in new tab: %s", landing_url)
+    await tab.goto(
+        landing_url,
+        wait_until="domcontentloaded",
+        timeout=settings.scrape_timeout_ms,
+    )
+    return tab
+
+
+async def ensure_logged_in(
+    page: Page,
+    *,
+    interactive: bool,
+    use_landing_page: bool = False,
+) -> tuple[bool, str]:
     """
     Ensure user is logged in.
 
-    interactive=True: open login page and wait for manual sign-in (first Re-scrape).
-    interactive=False: quick check only (should not be used before session exists).
+    interactive=True: wait for manual sign-in in the browser.
+    use_landing_page=True: navigate to TRR homepage (for sign-in tab flow).
     """
     if not settings.scrape_require_login:
         return True, "login_not_required"
@@ -70,20 +94,33 @@ async def ensure_logged_in(page, *, interactive: bool) -> tuple[bool, str]:
             "click Re-scrape, and sign in in the browser window"
         )
 
-    login_url = settings.scrape_login_url
-    logger.info("Opening login for interactive session: %s", login_url)
-    try:
-        await page.goto(
-            login_url,
-            wait_until="domcontentloaded",
-            timeout=settings.scrape_timeout_ms,
-        )
-    except Exception as exc:
-        return False, f"login_navigation_failed:{exc}"
+    if not use_landing_page:
+        login_url = settings.scrape_login_url
+        logger.info("Opening login for interactive session: %s", login_url)
+        try:
+            await page.goto(
+                login_url,
+                wait_until="domcontentloaded",
+                timeout=settings.scrape_timeout_ms,
+            )
+        except Exception as exc:
+            return False, f"login_navigation_failed:{exc}"
+    else:
+        landing_url = settings.scrape_home_url
+        logger.info("Landing tab ready for sign-in: %s", landing_url)
+        if page.url != landing_url.rstrip("/") and not page.url.startswith(landing_url):
+            try:
+                await page.goto(
+                    landing_url,
+                    wait_until="domcontentloaded",
+                    timeout=settings.scrape_timeout_ms,
+                )
+            except Exception as exc:
+                return False, f"landing_navigation_failed:{exc}"
 
     wait_seconds = settings.scrape_login_wait_seconds
     logger.info(
-        "Waiting up to %s seconds for sign-in (first Re-scrape authentication).",
+        "Waiting up to %s seconds — sign in on The RealReal in the browser tab.",
         wait_seconds,
     )
 

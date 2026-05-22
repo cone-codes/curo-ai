@@ -41,6 +41,8 @@ class Settings(BaseSettings):
     scrape_require_login: bool = True
     scrape_login_url: str = "https://www.therealreal.com/?auth_modal[view]=login"
     scrape_login_wait_seconds: int = 180
+    scrape_open_landing_on_no_new: bool = True
+    scrape_retry_after_sign_in: bool = True
 
     lexical_weight: float = 1.0
     semantic_text_weight: float = 1.0

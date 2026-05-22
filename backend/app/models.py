@@ -49,3 +49,5 @@ class ScrapeStatus(BaseModel):
     products_found: int = 0
     blocked_at_url: str | None = None
     diagnostics: dict[str, Any] = Field(default_factory=dict)
+    opened_sign_in_tab: bool = False
+    sign_in_landing_url: str = ""

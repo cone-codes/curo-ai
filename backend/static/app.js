@@ -34,6 +34,13 @@ function formatPrice(listing) {
   }).format(listing.price);
 }
 
+const TRR_LANDING = "https://www.therealreal.com/";
+
+function openSignInTab(url) {
+  const target = url || TRR_LANDING;
+  window.open(target, "_blank", "noopener,noreferrer");
+}
+
 function formatScrapeStatus(data) {
   const parts = [
     `Status: ${data.status}`,
@@ -138,11 +145,18 @@ rescrapeBtn.addEventListener("click", async () => {
       } else if (payload.block_type === "captcha") {
         statusLine.textContent += " Complete any captcha in the browser window.";
       }
+      if (payload.new_listings === 0 || payload.opened_sign_in_tab) {
+        openSignInTab(payload.sign_in_landing_url);
+      }
       await fetchHealth();
       return;
     }
 
     statusLine.textContent = formatScrapeStatus(payload);
+    if (payload.new_listings === 0 || payload.opened_sign_in_tab) {
+      openSignInTab(payload.sign_in_landing_url);
+      statusLine.textContent += " — opened The RealReal in a new tab to sign in.";
+    }
     await fetchHealth();
   } catch (err) {
     statusLine.textContent = err.message;

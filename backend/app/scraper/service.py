@@ -68,6 +68,8 @@ def _map_status(
         diagnostics=run.to_diagnostics(),
         awaiting_login=run.outcome == "login_required",
         session_authenticated=is_session_authenticated(),
+        opened_sign_in_tab=run.opened_sign_in_tab,
+        sign_in_landing_url=run.sign_in_landing_url or settings.scrape_home_url,
     )
 
 
@@ -77,7 +79,7 @@ class ScrapeService:
         run: ScrapeRunResult
 
         try:
-            run = await scrape_listings_async()
+            run = await scrape_listings_async(known_ids=known)
         except Exception as exc:
             logger.exception("Playwright scrape failed")
             run = ScrapeRunResult(
@@ -91,7 +93,20 @@ class ScrapeService:
 
         if run.listings:
             upsert_many(run.listings)
-            return _map_status(run, used_seed=False, new_count=len(new_from_live))
+            status = _map_status(run, used_seed=False, new_count=len(new_from_live))
+            if (
+                len(new_from_live) == 0
+                and settings.scrape_open_landing_on_no_new
+                and not run.opened_sign_in_tab
+            ):
+                status.opened_sign_in_tab = True
+                status.sign_in_landing_url = settings.scrape_home_url
+                status.message = (
+                    f"{status.message};no_new_items_sign_in"
+                    if status.message
+                    else "no_new_items_open_landing_to_sign_in"
+                )
+            return status
 
         if settings.scrape_fallback_to_seed and SEED_LISTINGS_PATH.exists():
             _, new_from_seed = _apply_seed_fallback(known)

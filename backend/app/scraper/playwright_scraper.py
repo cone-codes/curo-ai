@@ -14,7 +14,7 @@ from urllib.parse import urljoin, urlparse
 
 from backend.app.config import settings
 from backend.app.models import Listing
-from backend.app.scraper.login import detect_logged_in, ensure_logged_in
+from backend.app.scraper.login import detect_logged_in, ensure_logged_in, open_landing_tab
 from backend.app.scraper.stealth import STEALTH_INIT_SCRIPT
 
 logger = logging.getLogger(__name__)
@@ -49,6 +49,8 @@ class ScrapeRunResult:
     blocked_at_url: str | None = None
     used_persistent_profile: bool = False
     headless: bool = True
+    opened_sign_in_tab: bool = False
+    sign_in_landing_url: str = ""
 
     def to_diagnostics(self) -> dict[str, Any]:
         return {
@@ -61,6 +63,7 @@ class ScrapeRunResult:
             "headless": self.headless,
             "listing_urls": settings.listing_urls(),
             "require_login": settings.scrape_require_login,
+            "opened_sign_in_tab": self.opened_sign_in_tab,
         }
 
 
@@ -347,7 +350,60 @@ def _paginated_url(base_url: str, page_num: int) -> str:
     return f"{base_url}{sep}page={page_num}"
 
 
-async def scrape_listings_async() -> ScrapeRunResult:
+
+
+async def _collect_listings_from_urls(
+    page,
+    listing_urls: list[str],
+    pages_budget: int,
+    result: ScrapeRunResult,
+) -> list[Listing]:
+    """Scrape listing pages and update result counters."""
+    all_listings: list[Listing] = []
+    pages_used = 0
+    for list_url in listing_urls:
+        if pages_used >= pages_budget:
+            break
+        remaining = pages_budget - pages_used
+        for page_num in range(1, remaining + 1):
+            url = _paginated_url(list_url, page_num)
+            if pages_used > 0:
+                await asyncio.sleep(_random_delay_ms(
+                    settings.scrape_delay_min_ms,
+                    settings.scrape_delay_max_ms,
+                ))
+
+            page_listings, block, nav_error = await _fetch_listing_page(page, url)
+            pages_used += 1
+            result.pages_scraped = pages_used
+
+            if block in ("blocked", "captcha"):
+                result.block_type = block
+                result.blocked_at_url = url
+                result.message = block
+                all_listings.extend(page_listings)
+                if settings.scrape_stop_on_block:
+                    return _dedupe(all_listings)
+                continue
+
+            if block == "parse_error":
+                result.products_per_page.append(0)
+                logger.info("No products parsed at %s, continuing", url)
+                continue
+
+            if nav_error:
+                result.block_type = "navigation_error"
+                result.message = nav_error
+                if settings.scrape_stop_on_block:
+                    return _dedupe(all_listings)
+                continue
+
+            result.products_per_page.append(len(page_listings))
+            all_listings.extend(page_listings)
+    return _dedupe(all_listings)
+
+
+async def scrape_listings_async(known_ids: set[str] | None = None) -> ScrapeRunResult:
     from playwright.async_api import async_playwright
 
     result = ScrapeRunResult(
@@ -427,53 +483,37 @@ async def scrape_listings_async() -> ScrapeRunResult:
             await _close(context, browser)
             return result
 
-        pages_used = 0
-        for list_url in listing_urls:
-            if pages_used >= pages_budget:
-                break
-            remaining = pages_budget - pages_used
-            for page_num in range(1, remaining + 1):
-                url = _paginated_url(list_url, page_num)
-                if pages_used > 0:
-                    await asyncio.sleep(_random_delay_ms(
-                        settings.scrape_delay_min_ms,
-                        settings.scrape_delay_max_ms,
-                    ))
+        all_listings = await _collect_listings_from_urls(
+            page, listing_urls, pages_budget, result
+        )
 
-                page_listings, block, nav_error = await _fetch_listing_page(page, url)
-                pages_used += 1
-                result.pages_scraped = pages_used
+        known_ids = known_ids or set()
+        new_listings = [l for l in all_listings if l.id not in known_ids]
 
-                if block in ("blocked", "captcha"):
-                    result.block_type = block
-                    result.blocked_at_url = url
-                    result.message = block
-                    all_listings.extend(page_listings)
-                    if settings.scrape_stop_on_block:
-                        result.listings = _dedupe(all_listings)
-                        result.products_per_page.append(len(page_listings))
-                        await _close(context, browser)
-                        result.outcome = _finalize_outcome(result)
-                        return result
-                    continue
-
-                if block == "parse_error":
-                    result.products_per_page.append(0)
-                    logger.info("No products parsed at %s, continuing", url)
-                    continue
-
-                if nav_error:
-                    result.block_type = "navigation_error"
-                    result.message = nav_error
-                    if settings.scrape_stop_on_block:
-                        await _close(context, browser)
-                        result.outcome = "timeout" if "timeout" in nav_error.lower() else "error"
-                        return result
-                    continue
-
-                result.products_per_page.append(len(page_listings))
-                all_listings.extend(page_listings)
-                pages_used = result.pages_scraped
+        if (
+            len(new_listings) == 0
+            and settings.scrape_open_landing_on_no_new
+            and settings.scrape_require_login
+            and not settings.scrape_headless
+        ):
+            result.opened_sign_in_tab = True
+            result.sign_in_landing_url = settings.scrape_home_url
+            sign_in_tab = await open_landing_tab(context)
+            login_ok, login_message = await ensure_logged_in(
+                sign_in_tab, interactive=True, use_landing_page=True
+            )
+            if login_ok and settings.scrape_retry_after_sign_in:
+                logger.info("Retrying scrape after sign-in on landing tab")
+                retry_listings = await _collect_listings_from_urls(
+                    sign_in_tab, listing_urls, pages_budget, result
+                )
+                all_listings = _dedupe(retry_listings + all_listings)
+                new_listings = [l for l in all_listings if l.id not in known_ids]
+                if new_listings:
+                    result.message = "ok_after_sign_in_retry"
+            elif not login_ok:
+                result.message = login_message
+                result.outcome = "login_required"
 
         await _close(context, browser)
 
