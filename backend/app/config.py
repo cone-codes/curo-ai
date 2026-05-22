@@ -38,6 +38,10 @@ class Settings(BaseSettings):
     scrape_keep_browser_open_seconds: int = 0
     scrape_browser_channel: str = ""
 
+    scrape_require_login: bool = True
+    scrape_login_url: str = "https://www.therealreal.com/?auth_modal[view]=login"
+    scrape_login_wait_seconds: int = 180
+
     lexical_weight: float = 1.0
     semantic_text_weight: float = 1.0
     semantic_image_weight: float = 0.8

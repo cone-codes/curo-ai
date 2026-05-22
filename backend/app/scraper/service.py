@@ -37,6 +37,8 @@ def _map_status(
         status = "completed" if run.outcome == "success" else "partial_success"
     elif used_seed:
         status = "completed_with_seed_fallback"
+    elif run.outcome == "login_required":
+        status = "login_required"
     elif blocked:
         status = "captcha_required" if run.outcome == "captcha" else "blocked"
     elif run.outcome == "timeout":

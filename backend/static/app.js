@@ -110,7 +110,7 @@ form.addEventListener("submit", async (e) => {
 rescrapeBtn.addEventListener("click", async () => {
   rescrapeBtn.disabled = true;
   statusLine.textContent =
-    "Scraping TheRealReal with session warmup (headed browser recommended). This may take 1–2 minutes…";
+    "Sign in to The RealReal in the browser window if prompted (up to 3 min), then scraping continues…";
 
   try {
     const res = await fetch("/api/scrape", { method: "POST" });
@@ -119,7 +119,10 @@ rescrapeBtn.addEventListener("click", async () => {
 
     if (!res.ok) {
       statusLine.textContent = formatScrapeStatus(payload);
-      if (payload.block_type === "captcha") {
+      if (payload.status === "login_required" || payload.outcome === "login_required") {
+        statusLine.textContent +=
+          " — Set SCRAPE_HEADLESS=false, click Re-scrape, and sign in when the browser opens.";
+      } else if (payload.block_type === "captcha") {
         statusLine.textContent +=
           " — Try SCRAPE_HEADLESS=false locally and complete the captcha in the browser window.";
       }

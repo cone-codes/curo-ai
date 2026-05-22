@@ -8,6 +8,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
 from backend.app.config import settings
+from backend.app.scraper.login import ensure_logged_in
+from backend.app.scraper.stealth import STEALTH_INIT_SCRIPT
 
 
 async def main():
@@ -23,8 +25,11 @@ async def main():
             kwargs["channel"] = settings.scrape_browser_channel.strip()
         browser = await p.chromium.launch(**kwargs)
         page = await browser.new_page()
-        print("Navigating to", settings.scrape_home_url)
-        await page.goto(settings.scrape_home_url, wait_until="domcontentloaded", timeout=60000)
+        await page.add_init_script(STEALTH_INIT_SCRIPT)
+        ok, msg = await ensure_logged_in(page)
+        print("Login:", ok, msg)
+        print("Navigating to", settings.scrape_list_url)
+        await page.goto(settings.scrape_list_url, wait_until="domcontentloaded", timeout=60000)
         wait = settings.scrape_keep_browser_open_seconds or 30
         print(f"Browser open for {wait}s — look for the Chromium/Chrome window now.")
         await asyncio.sleep(wait)

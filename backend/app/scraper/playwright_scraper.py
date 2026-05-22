@@ -14,13 +14,14 @@ from urllib.parse import urljoin, urlparse
 
 from backend.app.config import settings
 from backend.app.models import Listing
+from backend.app.scraper.login import ensure_logged_in
 from backend.app.scraper.stealth import STEALTH_INIT_SCRIPT
 
 logger = logging.getLogger(__name__)
 
 PRODUCT_PATH = re.compile(r"/products/[a-z0-9-]+", re.I)
 BlockType = Literal["blocked", "captcha", "timeout", "navigation_error", "parse_error", None]
-OutcomeType = Literal["success", "partial", "blocked", "captcha", "timeout", "error", "empty"]
+OutcomeType = Literal["success", "partial", "blocked", "captcha", "timeout", "error", "empty", "login_required"]
 
 BASE_URL = "https://www.therealreal.com"
 USER_AGENT = (
@@ -59,6 +60,7 @@ class ScrapeRunResult:
             "used_persistent_profile": self.used_persistent_profile,
             "headless": self.headless,
             "listing_urls": settings.listing_urls(),
+            "require_login": settings.scrape_require_login,
         }
 
 
@@ -414,6 +416,14 @@ async def scrape_listings_async() -> ScrapeRunResult:
             await _close(context, browser)
             return result
 
+        login_ok, login_message = await ensure_logged_in(page)
+        if not login_ok:
+            result.outcome = "login_required"
+            result.message = login_message
+            result.blocked_at_url = settings.scrape_login_url
+            await _close(context, browser)
+            return result
+
         pages_used = 0
         for list_url in listing_urls:
             if pages_used >= pages_budget:
@@ -515,4 +525,6 @@ def _finalize_outcome(result: ScrapeRunResult) -> OutcomeType:
         return "timeout"
     if result.block_type:
         return "error"
+    if result.message and "login" in result.message:
+        return "login_required"
     return "empty"

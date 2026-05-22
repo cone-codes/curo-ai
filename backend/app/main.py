@@ -61,6 +61,8 @@ async def health():
             "persistent_profile": settings.scrape_persistent_profile,
             "profile_dir": str(settings.browser_profile_path()),
             "warmup_enabled": settings.scrape_warmup_enabled,
+            "require_login": settings.scrape_require_login,
+            "login_wait_seconds": settings.scrape_login_wait_seconds,
             "slow_mo_ms": settings.scrape_slow_mo_ms,
             "keep_browser_open_seconds": settings.scrape_keep_browser_open_seconds,
         },
@@ -81,7 +83,7 @@ async def scrape():
     if count_listings() > 0:
         index_manager.build()
 
-    if result.status in ("blocked", "captcha_required") and not result.used_seed_fallback:
+    if result.status in ("blocked", "captcha_required", "login_required") and not result.used_seed_fallback:
         raise HTTPException(
             status_code=503,
             detail=result.model_dump(),
