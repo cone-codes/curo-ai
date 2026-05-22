@@ -43,22 +43,28 @@ async def connect_to_chrome(endpoint: str | None = None):
     playwright = await async_playwright().start()
     browser = await playwright.chromium.connect_over_cdp(endpoint)
 
-    context = browser.contexts[0] if browser.contexts else await browser.new_context()
-    page = context.pages[0] if context.pages else await context.new_page()
+    trr_pages = []
+    for ctx in browser.contexts:
+        for pg in ctx.pages:
+            if "therealreal.com" in (pg.url or ""):
+                trr_pages.append(pg)
+    if trr_pages:
+        page = trr_pages[-1]
+        context = page.context
+    else:
+        context = browser.contexts[0] if browser.contexts else await browser.new_context()
+        page = context.pages[0] if context.pages else await context.new_page()
 
     logger.info(
-        "Connected to Chrome via CDP (%s) — %d context(s), using existing session",
+        "Connected to Chrome via CDP (%s) — tab: %s",
         endpoint,
-        len(browser.contexts),
+        page.url or "(blank)",
     )
     return playwright, browser, context, page
 
 
-async def disconnect(playwright, browser) -> None:
-    try:
-        await browser.close()
-    except Exception:
-        pass
+async def disconnect(playwright, browser=None) -> None:
+    # CDP: only disconnect Playwright; leave the user's Chrome running.
     try:
         await playwright.stop()
     except Exception:

@@ -115,6 +115,18 @@ Use only this Chrome window for scraping — not your normal daily Chrome profil
 
 ---
 
+
+## Still not working? Diagnose first
+
+```powershell
+.\start_chrome_debug.ps1
+# In that Chrome: sign in to TRR, open New Arrivals (products visible on screen)
+$env:PYTHONPATH = "."
+python chrome_crawler.py --diagnose
+```
+
+You need **Product links on page > 0** and **Parsed: (a title)** before the full crawl will work.
+
 ## Step 6 — Crawl listings
 
 ```powershell

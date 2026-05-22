@@ -42,6 +42,9 @@ async def main() -> int:
             for err in result.errors[:5]:
                 print(f"    - {err}")
         print(
+            "\nRun: PYTHONPATH=. python chrome_crawler.py --diagnose"
+        )
+        print(
             "\nCommon causes:"
             "\n  - login_required / captcha: sign in on TRR in the Chrome window from start_chrome_debug.ps1"
             "\n  - page_not_ready: page loaded before product data; pull latest code (longer wait added)"
@@ -61,4 +64,7 @@ async def main() -> int:
 
 
 if __name__ == "__main__":
+    if "--diagnose" in sys.argv:
+        from scripts.chrome_crawl_diagnose import main as diagnose_main
+        sys.exit(asyncio.run(diagnose_main()))
     sys.exit(asyncio.run(main()))

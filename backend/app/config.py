@@ -64,6 +64,9 @@ class Settings(BaseSettings):
     chrome_crawl_manual_wait_seconds: int = 600
     chrome_crawl_manual_poll_seconds: float = 2.0
     chrome_crawl_manual_wait_for: str = "captcha,login_required,blocked,page_not_ready"
+    chrome_crawl_prefer_current_tab: bool = True
+    chrome_crawl_category_scroll_rounds: int = 15
+    chrome_crawl_fallback_seed_urls: bool = True
 
     scrape_cookies_path: str = ""
 

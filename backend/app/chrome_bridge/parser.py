@@ -35,10 +35,10 @@ def is_product_path(path: str) -> bool:
     segments = parts[1:]
     if len(segments) == 1:
         seg = segments[0].lower()
-        if seg in _CATEGORY_SEGMENTS:
+        if seg in _CATEGORY_SEGMENTS or seg in ("details", "search"):
             return False
-        return len(segments[0]) >= 8
-    return len(segments[-1]) >= 5
+        return len(segments[0]) >= 5
+    return len(segments[-1]) >= 4
 
 
 def detect_page_issue(html: str, page_title: str = "") -> str | None:
@@ -51,7 +51,9 @@ def detect_page_issue(html: str, page_title: str = "") -> str | None:
         return "blocked"
     if "perimeterx" in lower and ("captcha" in lower or "blocked" in lower):
         return "blocked"
-    if "auth_modal" in lower or "sign in to continue" in lower:
+    if "sign in to continue" in lower or "log in to continue" in lower:
+        return "login_required"
+    if "auth_modal[view]=login" in lower and "og:title" not in lower[:120000]:
         return "login_required"
     return None
 

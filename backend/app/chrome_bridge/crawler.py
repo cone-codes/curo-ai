@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import random
 import time
@@ -21,6 +22,25 @@ from backend.app.chrome_bridge.parser import (
 from backend.app.models import Listing
 
 logger = logging.getLogger(__name__)
+
+
+
+def _fallback_urls_from_seed_file() -> list[str]:
+    """Last resort product URLs so crawl can proceed when grid discovery fails."""
+    from backend.app.config import SEED_LISTINGS_PATH
+
+    if not SEED_LISTINGS_PATH.exists():
+        return []
+    try:
+        data = json.loads(SEED_LISTINGS_PATH.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return []
+    items = data if isinstance(data, list) else data.get("listings", [])
+    urls: list[str] = []
+    for item in items:
+        if isinstance(item, dict) and item.get("url"):
+            urls.append(str(item["url"]).split("?")[0])
+    return urls[: settings.chrome_crawl_max_listings]
 
 HTML_CACHE_DIR = DATA_DIR / "html_snapshots"
 
@@ -313,7 +333,8 @@ async def _extract_urls_with_manual_wait(page, list_url: str) -> list[str]:
         if not ok:
             return []
 
-    found = extract_product_urls_from_html(html)
+    await scroll_category_page(page)
+    found = await extract_urls_combined(page, html)
     if found:
         return found
 
@@ -322,24 +343,50 @@ async def _extract_urls_with_manual_wait(page, list_url: str) -> list[str]:
             page, list_url, "no_product_urls", require_product=False
         )
         if ok:
-            return extract_product_urls_from_html(html)
+            await scroll_category_page(page)
+            return await extract_urls_combined(page, html)
     return []
+
+
+async def _discover_from_current_tab(page) -> list[str]:
+    """Use whatever category/grid the user already has open in Chrome."""
+    url = page.url or ""
+    if "therealreal.com" not in url:
+        return []
+    logger.info("Discovering product links from current tab: %s", url)
+    issue_html, _, title = await _snapshot_page(page)
+    issue = detect_page_issue(issue_html, title)
+    if issue and _should_wait_for_label(issue):
+        _, _, _, ok = await _wait_for_manual_resolution(
+            page, url, issue, require_product=False
+        )
+        if not ok:
+            return []
+    await scroll_category_page(page)
+    return await extract_urls_combined(page)
 
 
 async def _collect_listing_urls(page, result: ChromeCrawlResult) -> list[str]:
     urls: list[str] = []
-    seed_pages = settings.listing_urls()
-    for list_url in seed_pages[: max(1, settings.scrape_max_pages)]:
-        found = await _extract_urls_with_manual_wait(page, list_url)
-        logger.info("Category %s -> %d product links", list_url, len(found))
-        urls.extend(found)
-        await asyncio.sleep(_delay_ms())
+
+    if settings.chrome_crawl_prefer_current_tab:
+        urls.extend(await _discover_from_current_tab(page))
+
+    if len(urls) < 3:
+        seed_pages = settings.listing_urls()
+        for list_url in seed_pages[: max(1, settings.scrape_max_pages)]:
+            found = await _extract_urls_with_manual_wait(page, list_url)
+            logger.info("Category %s -> %d product links", list_url, len(found))
+            urls.extend(found)
+            await asyncio.sleep(_delay_ms())
+
     seen: set[str] = set()
     unique: list[str] = []
     for u in urls:
         if u not in seen:
             seen.add(u)
             unique.append(u)
+    logger.info("Total unique product URLs: %d", len(unique))
     return unique[: settings.chrome_crawl_max_listings]
 
 
@@ -413,6 +460,7 @@ async def run_chrome_crawl() -> ChromeCrawlResult:
         return result
 
     page = _pick_page(browser) or default_page
+    print(f"\nChrome tab: {page.url or '(empty)'}\n", flush=True)
     if not page:
         result.message = "no_chrome_tab"
         result.errors.append("no_chrome_tab")
@@ -441,6 +489,16 @@ async def run_chrome_crawl() -> ChromeCrawlResult:
                         : settings.chrome_crawl_max_listings
                     ]
                     result.product_urls_found = len(product_urls)
+
+        if not product_urls and settings.chrome_crawl_fallback_seed_urls:
+            product_urls = _fallback_urls_from_seed_file()
+            result.product_urls_found = len(product_urls)
+            if product_urls:
+                print(
+                    f"\nUsing {len(product_urls)} seed URLs (could not find links on TRR page).\n",
+                    flush=True,
+                )
+                logger.warning("Falling back to seed listing URLs")
 
         if not product_urls:
             result.message = "no_product_urls_found_sign_in_and_open_category_in_chrome"
