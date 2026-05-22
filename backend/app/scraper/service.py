@@ -7,6 +7,7 @@ SEED_EXTRA_PATH = ROOT_DIR / "data" / "seed_listings_extra.json"
 
 from backend.app.models import Listing, ScrapeStatus
 from backend.app.scraper.playwright_scraper import ScrapeRunResult, scrape_listings_async
+from backend.app.session_state import auth_status, is_session_authenticated
 from backend.app.storage import count_listings, existing_ids, load_seed_from_file, upsert_many
 
 logger = logging.getLogger(__name__)
@@ -65,6 +66,8 @@ def _map_status(
         products_found=len(run.listings),
         blocked_at_url=run.blocked_at_url,
         diagnostics=run.to_diagnostics(),
+        awaiting_login=run.outcome == "login_required",
+        session_authenticated=is_session_authenticated(),
     )
 
 

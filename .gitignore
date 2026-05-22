@@ -10,3 +10,4 @@ data/indexes/
 .mypy_cache/
 .DS_Store
 data/browser_profile/
+data/auth_session.json

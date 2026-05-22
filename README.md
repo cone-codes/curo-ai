@@ -31,25 +31,16 @@ On first launch, seed listings load automatically so search works immediately. C
 
 The RealReal often **requires you to be signed in** before listing pages load. The scraper supports **manual login** in a headed browser; your session is saved in `data/browser_profile/`.
 
-### One-time login (recommended)
+### Sign in on first Re-scrape (no setup before starting the app)
 
-```bash
-cp .env.example .env
-# Ensure:
-# SCRAPE_HEADLESS=false
-# SCRAPE_REQUIRE_LOGIN=true
+1. Start the app: `PYTHONPATH=. python run.py`
+2. Open http://localhost:8000
+3. Click **Re-scrape listings** — a browser opens and asks you to sign in
+4. After sign-in, scraping continues and the session is saved to `data/browser_profile/`
 
-PYTHONPATH=. python scripts/login_trr.py
-```
+Later Re-scrape clicks reuse that session (no login prompt unless the session expired).
 
-Sign in when the browser opens. Then run the app and click **Re-scrape** — it should reuse your session.
-
-### On each re-scrape
-
-1. Browser opens (`SCRAPE_HEADLESS=false`)
-2. If not logged in, navigates to the login page
-3. Waits up to `SCRAPE_LOGIN_WAIT_SECONDS` (default 180) for you to sign in
-4. Continues scraping listing pages
+Optional: run `PYTHONPATH=. python scripts/login_trr.py` if you prefer to sign in before opening the UI.
 
 To skip login (seed data only): `SCRAPE_REQUIRE_LOGIN=false`
 

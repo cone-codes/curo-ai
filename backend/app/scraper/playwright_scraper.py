@@ -14,7 +14,7 @@ from urllib.parse import urljoin, urlparse
 
 from backend.app.config import settings
 from backend.app.models import Listing
-from backend.app.scraper.login import ensure_logged_in
+from backend.app.scraper.login import detect_logged_in, ensure_logged_in
 from backend.app.scraper.stealth import STEALTH_INIT_SCRIPT
 
 logger = logging.getLogger(__name__)
@@ -416,7 +416,10 @@ async def scrape_listings_async() -> ScrapeRunResult:
             await _close(context, browser)
             return result
 
-        login_ok, login_message = await ensure_logged_in(page)
+        already_logged_in = await detect_logged_in(page)
+        login_ok, login_message = await ensure_logged_in(
+            page, interactive=not already_logged_in
+        )
         if not login_ok:
             result.outcome = "login_required"
             result.message = login_message

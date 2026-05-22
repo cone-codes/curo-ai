@@ -41,6 +41,8 @@ class ScrapeStatus(BaseModel):
     new_listings: int = 0
     total_listings: int = 0
     used_seed_fallback: bool = False
+    awaiting_login: bool = False
+    session_authenticated: bool = False
     blocked: bool = False
     block_type: str | None = None
     pages_scraped: int = 0

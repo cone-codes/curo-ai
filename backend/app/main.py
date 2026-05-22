@@ -11,6 +11,7 @@ from backend.app.indexing.manager import IndexManager
 from backend.app.models import ScrapeStatus, SearchResponse
 from backend.app.scraper.service import ScrapeService
 from backend.app.search_service import SearchService
+from backend.app.session_state import auth_status, clear_session
 from backend.app.storage import count_listings, load_seed_from_file, upsert_many
 
 logging.basicConfig(level=logging.INFO)
@@ -48,6 +49,18 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 @app.get("/")
 async def home():
     return FileResponse(STATIC_DIR / "index.html")
+
+
+@app.get("/api/auth/status")
+async def get_auth_status():
+    return auth_status()
+
+
+@app.post("/api/auth/clear")
+async def post_auth_clear():
+    """Reset saved login so the next Re-scrape prompts for sign-in again."""
+    clear_session()
+    return {"status": "ok", "message": "Session cleared. Next Re-scrape will ask you to sign in."}
 
 
 @app.get("/api/health")

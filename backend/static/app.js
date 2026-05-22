@@ -5,12 +5,24 @@ const statusLine = document.getElementById("status-line");
 const statsEl = document.getElementById("stats");
 const rescrapeBtn = document.getElementById("rescrape-btn");
 
+async function fetchAuthStatus() {
+  const res = await fetch("/api/auth/status");
+  if (!res.ok) return null;
+  return res.json();
+}
+
 async function fetchHealth() {
   const res = await fetch("/api/health");
   if (!res.ok) return;
   const data = await res.json();
+  const auth = await fetchAuthStatus();
+  const authHint = auth?.needs_login
+    ? " · sign in on first Re-scrape"
+    : auth?.authenticated
+      ? " · TRR session saved"
+      : "";
   const mode = data.scrape_defaults?.headless ? "headless" : "headed";
-  statsEl.textContent = `${data.listings} listings · index ${data.index_ready ? "ready" : "building"} · scrape ${mode}`;
+  statsEl.textContent = `${data.listings} listings · index ${data.index_ready ? "ready" : "building"} · scrape ${mode}${authHint}`;
 }
 
 function formatPrice(listing) {
@@ -29,21 +41,12 @@ function formatScrapeStatus(data) {
     `${data.new_listings} new, ${data.total_listings} total`,
     `${data.products_found ?? 0} products this run`,
   ];
-  if (data.block_type) {
-    parts.push(`Block: ${data.block_type}`);
-  }
-  if (data.blocked_at_url) {
-    parts.push(`Blocked at: ${data.blocked_at_url}`);
-  }
-  if (data.pages_scraped) {
-    parts.push(`Pages scraped: ${data.pages_scraped}`);
-  }
-  if (data.used_seed_fallback) {
-    parts.push("Seed fallback used");
-  }
-  if (data.message) {
-    parts.push(data.message);
-  }
+  if (data.block_type) parts.push(`Block: ${data.block_type}`);
+  if (data.blocked_at_url) parts.push(`Blocked at: ${data.blocked_at_url}`);
+  if (data.pages_scraped) parts.push(`Pages scraped: ${data.pages_scraped}`);
+  if (data.used_seed_fallback) parts.push("Seed fallback used");
+  if (data.session_authenticated) parts.push("TRR session active");
+  if (data.message) parts.push(data.message);
   return parts.join(" · ");
 }
 
@@ -108,9 +111,19 @@ form.addEventListener("submit", async (e) => {
 });
 
 rescrapeBtn.addEventListener("click", async () => {
+  const auth = await fetchAuthStatus();
+  if (auth?.needs_login) {
+    const proceed = window.confirm(
+      "First Re-scrape: a browser window will open so you can sign in to The RealReal.\n\n" +
+        "After you sign in, scraping will continue automatically.\n\nContinue?"
+    );
+    if (!proceed) return;
+  }
+
   rescrapeBtn.disabled = true;
-  statusLine.textContent =
-    "Sign in to The RealReal in the browser window if prompted (up to 3 min), then scraping continues…";
+  statusLine.textContent = auth?.needs_login
+    ? "Opening browser — sign in to The RealReal when prompted…"
+    : "Re-scraping listings (reusing your saved session)…";
 
   try {
     const res = await fetch("/api/scrape", { method: "POST" });
@@ -121,10 +134,9 @@ rescrapeBtn.addEventListener("click", async () => {
       statusLine.textContent = formatScrapeStatus(payload);
       if (payload.status === "login_required" || payload.outcome === "login_required") {
         statusLine.textContent +=
-          " — Set SCRAPE_HEADLESS=false, click Re-scrape, and sign in when the browser opens.";
+          " Set SCRAPE_HEADLESS=false, then click Re-scrape again to sign in.";
       } else if (payload.block_type === "captcha") {
-        statusLine.textContent +=
-          " — Try SCRAPE_HEADLESS=false locally and complete the captcha in the browser window.";
+        statusLine.textContent += " Complete any captcha in the browser window.";
       }
       await fetchHealth();
       return;
