@@ -84,6 +84,8 @@ class Settings(BaseSettings):
     scrapfly_session: str = "trr-scrape"
     scrapfly_use_cookies_file: bool = True
     scrapfly_cookies_path: str = ""
+    scrapfly_login_first: bool = True
+    scrapfly_skip_login_if_cookies: bool = True
 
     scrape_cookies_path: str = ""
 

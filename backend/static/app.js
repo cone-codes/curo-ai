@@ -201,8 +201,10 @@ const scrapflyScrapeBtn = document.getElementById("scrapfly-scrape-btn");
 if (scrapflyScrapeBtn) {
   scrapflyScrapeBtn.addEventListener("click", async () => {
     const ok = window.confirm(
-      "Scrape via ScrapFly (cloud API):\n\n" +
-        "Requires SCRAPFLY_API_KEY in .env. Uses API credits (~30+ per page).\n\nContinue?"
+      "Scrape via ScrapFly:\n\n" +
+        "1. A browser opens so you can sign in to The RealReal (cookies saved automatically)\n" +
+        "2. Then ScrapFly fetches listings (~30+ API credits per page)\n\n" +
+        "Requires SCRAPFLY_API_KEY in .env.\n\nContinue?"
     );
     if (!ok) return;
     scrapflyScrapeBtn.disabled = true;

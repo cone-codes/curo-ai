@@ -1,102 +1,80 @@
-# ScrapFly integration
+# ScrapFly setup — full instructions
 
-ScrapFly fetches The RealReal pages in the cloud (PerimeterX bypass, residential proxies, JS rendering). Parsed listings go into the same SQLite DB and search indexes as Chrome CDP / Playwright.
+ScrapFly fetches The RealReal in the cloud. **You sign in once in a local browser** — cookies are saved automatically (no export).
 
-## 1. Get an API key
+---
 
-1. Sign up: https://scrapfly.io/register (free tier includes ~1,000 credits).
-2. Copy your API key from https://scrapfly.io/dashboard
+## Step 1 — Install
 
-## 2. Configure `.env`
+```powershell
+cd C:\Users\CØNY\curo-ai
+git pull origin cursor/therealreal-search-app-351e
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+playwright install chromium
+```
+
+---
+
+## Step 2 — ScrapFly API key
+
+1. https://scrapfly.io/register
+2. Copy key from https://scrapfly.io/dashboard
+
+---
+
+## Step 3 — `.env`
 
 ```env
 SCRAPFLY_API_KEY=scp-live-your-key-here
+SCRAPFLY_LOGIN_FIRST=true
+SCRAPFLY_SKIP_LOGIN_IF_COOKIES=true
+SCRAPFLY_USE_COOKIES_FILE=true
 SCRAPFLY_COUNTRY=us
 SCRAPFLY_ASP=true
 SCRAPFLY_RENDER_JS=true
 SCRAPFLY_PROXY_POOL=public_residential_pool
-SCRAPFLY_AUTO_SCROLL=true
-SCRAPFLY_COST_BUDGET=50
 SCRAPFLY_MAX_LISTINGS=40
-SCRAPFLY_DELAY_SECONDS=2
-SCRAPFLY_SESSION=trr-scrape
-SCRAPFLY_USE_COOKIES_FILE=true
+SCRAPE_HEADLESS=false
+SCRAPE_LOGIN_WAIT_SECONDS=180
 ```
 
-Optional: export cookies from your browser to `data/trr_cookies.json` (same file as Playwright login) so ScrapFly sees a logged-in session.
+---
 
-## 3. Install dependency
+## Step 4 — Sign in (automatic — no cookie export)
 
-```bash
-pip install -r requirements.txt
+When you run ScrapFly, a **browser window opens first**:
+
+1. Sign in to The RealReal (Google or email).
+2. Wait until the terminal shows: `[OK] Signed in — saved N cookies to data\trr_cookies.json`
+3. ScrapFly crawl starts automatically.
+
+**Next runs:** if cookies are still valid, sign-in is skipped. To sign in again, delete `data\trr_cookies.json` and re-run.
+
+---
+
+## Step 5 — Run
+
+```powershell
+$env:PYTHONPATH = "."
+python scrapfly_crawler.py
 ```
 
-## 4. Run a crawl
+Or: `python run.py` → **Scrape via ScrapFly**
 
-**CLI:**
+---
 
-```bash
-PYTHONPATH=. python scrapfly_crawler.py
-```
+## Step 6 — Search
 
-**Web UI:** click **Scrape via ScrapFly** on http://localhost:8000
+http://localhost:8000
 
-**API:**
-
-```bash
-curl -X POST http://localhost:8000/api/scrape/scrapfly
-```
-
-## How it works
-
-```mermaid
-flowchart LR
-  A[scrapfly_crawler.py] --> B[ScrapFly API asp+JS]
-  B --> C[HTML]
-  C --> D[parser.py]
-  D --> E[(SQLite)]
-  E --> F[BM25 + semantic indexes]
-```
-
-1. Fetches category URLs from `SCRAPE_LIST_URL` (with `auto_scroll`).
-2. Extracts product links from HTML.
-3. Fetches each product page via ScrapFly.
-4. Parses with `backend/app/chrome_bridge/parser.py`.
-5. Saves listings and rebuilds indexes.
-
-## Cost
-
-Roughly **30–40 API credits per page** with ASP + residential + JS. A full run (3 categories + 40 products) is about **1,300–1,700 credits** (~$0.20 on the Discovery plan). See prior cost discussion or ScrapFly dashboard logs (`X-Scrapfly-Api-Cost`).
-
-## Login / cookies
-
-ScrapFly does not open your Google sign-in UI. For member-only inventory:
-
-1. Sign in to TRR in your normal browser.
-2. Export cookies (EditThisCookie, etc.) to `data/trr_cookies.json`.
-3. Keep `SCRAPFLY_USE_COOKIES_FILE=true`.
-
-## vs Chrome CDP
-
-| | ScrapFly | Chrome passive |
-|--|----------|----------------|
-| Local Chrome | No | Yes |
-| PerimeterX | Usually handled by ScrapFly | You solve captcha |
-| Login | Cookie file | Natural in browser |
-| Cost | API credits | Free |
+---
 
 ## Troubleshooting
 
 | Issue | Fix |
 |-------|-----|
-| `Set SCRAPFLY_API_KEY` | Add key to `.env`, restart `python run.py` |
-| `no_product_urls_found` | Check category URL; increase `SCRAPFLY_COST_BUDGET` |
-| `parse_failed` | Page may be login wall — add `trr_cookies.json` |
-| High cost | Lower `SCRAPFLY_MAX_LISTINGS`; enable ScrapFly cache in dashboard |
-
-## Code layout
-
-- `backend/app/scrapfly_bridge/client.py` — single-page fetch
-- `backend/app/scrapfly_bridge/crawler.py` — discover + crawl loop
-- `backend/app/scraper/service.py` — `scrape_via_scrapfly()`
-- `POST /api/scrape/scrapfly` — UI/API entry
+| No browser opens | `SCRAPFLY_LOGIN_FIRST=true`, `SCRAPE_HEADLESS=false` |
+| Login timeout | Sign in faster; increase `SCRAPE_LOGIN_WAIT_SECONDS=300` |
+| Force new login | Delete `data\trr_cookies.json`, run again |
+| ScrapFly still fails | Check `SCRAPFLY_API_KEY`; lower `SCRAPFLY_MAX_LISTINGS=5` for a test |
