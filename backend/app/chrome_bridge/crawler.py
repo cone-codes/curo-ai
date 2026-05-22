@@ -12,7 +12,12 @@ from typing import Any
 
 from backend.app.config import DATA_DIR, settings
 from backend.app.chrome_bridge.connector import ChromeNotRunningError, connect_to_chrome, disconnect
-from backend.app.chrome_bridge.parser import extract_product_urls_from_html, parse_product_html
+from backend.app.chrome_bridge.parser import (
+    detect_page_issue,
+    extract_product_urls_from_html,
+    parse_failure_reason,
+    parse_product_html,
+)
 from backend.app.models import Listing
 
 logger = logging.getLogger(__name__)
@@ -47,6 +52,17 @@ def _delay_ms() -> float:
     ) / 1000.0
 
 
+def _pick_page(browser):
+    """Prefer a tab already on therealreal.com."""
+    for context in browser.contexts:
+        for page in context.pages:
+            if "therealreal.com" in (page.url or ""):
+                return page
+    if browser.contexts and browser.contexts[0].pages:
+        return browser.contexts[0].pages[0]
+    return None
+
+
 async def _human_pause(page) -> None:
     await asyncio.sleep(_delay_ms())
     for _ in range(settings.chrome_crawl_scroll_steps):
@@ -61,19 +77,44 @@ async def _human_pause(page) -> None:
         await asyncio.sleep(random.uniform(0.3, 0.9))
 
 
-async def _navigate_slow(page, url: str) -> str | None:
+async def _navigate_slow(page, url: str) -> tuple[str | None, str | None, str]:
+    """
+    Returns (html, __NEXT_DATA__ raw JSON, page title).
+    Waits for product shell to render before capturing HTML.
+    """
     try:
-        await page.goto(url, wait_until="domcontentloaded", timeout=settings.scrape_timeout_ms)
+        await page.goto(url, wait_until="load", timeout=settings.scrape_timeout_ms)
+        try:
+            await page.wait_for_function(
+                """() => {
+                    const og = document.querySelector('meta[property="og:title"]')?.content || '';
+                    const h1 = document.querySelector('h1')?.innerText || '';
+                    const nd = document.getElementById('__NEXT_DATA__')?.textContent || '';
+                    return (og.length > 5) || (h1.length > 5) || (nd.length > 200);
+                }""",
+                timeout=25000,
+            )
+        except Exception:
+            await asyncio.sleep(3)
         await _human_pause(page)
-        return await page.content()
+        title = await page.title()
+        html = await page.content()
+        next_raw = None
+        try:
+            next_raw = await page.evaluate(
+                "() => document.getElementById('__NEXT_DATA__')?.textContent || null"
+            )
+        except Exception:
+            pass
+        return html, next_raw, title
     except Exception as exc:
         logger.warning("Navigation failed %s: %s", url, exc)
-        return None
+        return None, None, ""
 
 
-def _save_html(listing_id: str, html: str) -> Path:
+def _save_html(name: str, html: str) -> Path:
     HTML_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    path = HTML_CACHE_DIR / f"{listing_id}.html"
+    path = HTML_CACHE_DIR / f"{name}.html"
     path.write_text(html, encoding="utf-8")
     return path
 
@@ -82,13 +123,13 @@ async def _collect_listing_urls(page) -> list[str]:
     urls: list[str] = []
     seed_pages = settings.listing_urls()
     for list_url in seed_pages[: max(1, settings.scrape_max_pages)]:
-        html = await _navigate_slow(page, list_url)
+        html, _, _ = await _navigate_slow(page, list_url)
         if not html:
             continue
         found = extract_product_urls_from_html(html)
+        logger.info("Category %s -> %d product links", list_url, len(found))
         urls.extend(found)
         await asyncio.sleep(_delay_ms())
-    # dedupe preserve order
     seen: set[str] = set()
     unique: list[str] = []
     for u in urls:
@@ -108,10 +149,16 @@ async def run_chrome_crawl() -> ChromeCrawlResult:
     browser = None
 
     try:
-        playwright, browser, _context, page = await connect_to_chrome()
+        playwright, browser, _context, default_page = await connect_to_chrome()
     except ChromeNotRunningError as exc:
         result.message = str(exc)
         result.errors.append(str(exc))
+        return result
+
+    page = _pick_page(browser) or default_page
+    if not page:
+        result.message = "no_chrome_tab"
+        result.errors.append("no_chrome_tab")
         return result
 
     try:
@@ -125,15 +172,29 @@ async def run_chrome_crawl() -> ChromeCrawlResult:
 
         for i, url in enumerate(product_urls):
             logger.info("Visiting (%d/%d) %s", i + 1, len(product_urls), url)
-            html = await _navigate_slow(page, url)
+            html, next_raw, title = await _navigate_slow(page, url)
             result.pages_visited += 1
             if not html:
                 result.errors.append(f"no_html:{url}")
                 continue
 
-            listing = parse_product_html(html, url)
+            issue = detect_page_issue(html, title)
+            if issue:
+                _save_html(f"failed_{i}_{issue}", html)
+                result.errors.append(f"{issue}:{url}")
+                logger.warning("Page issue %s at %s", issue, url)
+                continue
+
+            listing = parse_product_html(
+                html, url, next_data_raw=next_raw, page_title=title
+            )
             if not listing:
-                result.errors.append(f"parse_failed:{url}")
+                reason = parse_failure_reason(
+                    html, url, next_data_raw=next_raw, page_title=title
+                )
+                _save_html(f"failed_{i}_{reason}", html)
+                result.errors.append(f"parse_failed:{reason}:{url}")
+                logger.warning("Parse failed (%s) %s", reason, url)
                 continue
 
             _save_html(listing.id, html)

@@ -156,6 +156,17 @@ python run.py
 
 ## Troubleshooting
 
+### "No listings parsed" but pages were visited
+
+The crawler **opened** product URLs but could not read title/price from the HTML. Check the new error lines, e.g.:
+
+| Error in output | Meaning | Fix |
+|-----------------|---------|-----|
+| `login_required:...` | Not signed in on that Chrome profile | Sign in at therealreal.com in the debug Chrome window |
+| `captcha:...` | PerimeterX challenge | Complete "Press & Hold" in that Chrome window, then re-run |
+| `page_not_ready:...` | Page captured before React finished | `git pull` (longer wait), re-run crawler |
+| `parse_failed:no_product_fields:...` | HTML has no product JSON/meta | Open `data/html_snapshots/failed_*.html` — if blank or wrong page, sign in first |
+
 | Problem | Fix |
 |---------|-----|
 | Parser error, `ForEach-Object`, `Missing Catch` | Step 0 — replace `start_chrome_debug.ps1` |

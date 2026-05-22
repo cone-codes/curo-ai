@@ -34,9 +34,19 @@ async def main() -> int:
     print(result.to_dict())
 
     if not result.listings:
+        print("\nNo listings parsed.")
+        print(f"  Pages visited: {result.pages_visited}")
+        print(f"  Product URLs found: {result.product_urls_found}")
+        if result.errors:
+            print("  Errors (first few):")
+            for err in result.errors[:5]:
+                print(f"    - {err}")
         print(
-            "\nNo listings parsed. Ensure Chrome is running with remote debugging, "
-            "you are signed in to The RealReal, and a category page loads product links."
+            "\nCommon causes:"
+            "\n  - login_required / captcha: sign in on TRR in the Chrome window from start_chrome_debug.ps1"
+            "\n  - page_not_ready: page loaded before product data; pull latest code (longer wait added)"
+            "\n  - parse_failed: open data/html_snapshots/failed_*.html in a browser"
+            "\n  - no_product_urls_found: browse a category with items while signed in, then re-run"
         )
         return 1
 
