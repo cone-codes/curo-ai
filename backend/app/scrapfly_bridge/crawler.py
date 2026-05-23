@@ -73,13 +73,23 @@ async def run_scrapfly_crawl(
                 "Set SCRAPFLY_API_KEY in .env — get a key at https://scrapfly.io/dashboard"
             )
 
-        from backend.app.scrapfly_bridge.login import interactive_login_for_scrapfly
+        if settings.scrapfly_use_cookies_file:
+            from backend.app.scrapfly_bridge.login import has_saved_cookies, cookie_file_path
 
-        login_ok, login_msg = await interactive_login_for_scrapfly()
-        if not login_ok:
-            result.message = login_msg
-            result.errors.append(login_msg)
-            return result
+            if not has_saved_cookies():
+                path = cookie_file_path()
+                result.message = "cookies_required_export_to_data/trr_cookies.json"
+                print(
+                    "\nScrapFly needs TRR login cookies.\n"
+                    f"  1. Sign in at https://www.therealreal.com/ in Chrome\n"
+                    f"  2. Export cookies (Cookie-Editor extension) to:\n"
+                    f"     {path}\n"
+                    "  3. Run this again\n"
+                    "  See docs/SCRAPFLY.md or data/trr_cookies.README.md\n",
+                    flush=True,
+                )
+                result.errors.append(result.message)
+                return result
 
         if product_urls is None:
             product_urls = await _discover_product_urls()

@@ -202,9 +202,8 @@ if (scrapflyScrapeBtn) {
   scrapflyScrapeBtn.addEventListener("click", async () => {
     const ok = window.confirm(
       "Scrape via ScrapFly:\n\n" +
-        "1. A browser opens so you can sign in to The RealReal (cookies saved automatically)\n" +
-        "2. Then ScrapFly fetches listings (~30+ API credits per page)\n\n" +
-        "Requires SCRAPFLY_API_KEY in .env.\n\nContinue?"
+        "Requires SCRAPFLY_API_KEY and data/trr_cookies.json (export cookies after signing in).\n" +
+        "Uses ~30+ API credits per page.\n\nContinue?"
     );
     if (!ok) return;
     scrapflyScrapeBtn.disabled = true;
