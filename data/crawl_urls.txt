@@ -1,0 +1,3 @@
+# Paste one The RealReal product URL per line, then:
+#   PYTHONPATH=. python chrome_crawler.py --from-file data/crawl_urls.txt
+# https://www.therealreal.com/products/women/handbags/example-slug-abc12

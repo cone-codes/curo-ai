@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TheRealReal Search</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <header class="header">
+    <div class="brand">
+      <h1>TheRealReal Search</h1>
+      <p class="subtitle">Lexical BM25 + multimodal semantic (text &amp; image) hybrid ranking</p>
+    </div>
+    <div class="stats" id="stats">Loading index…</div>
+  </header>
+
+  <main class="container">
+    <section class="search-panel">
+      <form id="search-form" class="search-form">
+        <input
+          type="search"
+          id="query"
+          name="q"
+          placeholder="Search designer bags, watches, shoes…"
+          autocomplete="off"
+          required
+        />
+        <button type="submit" class="btn primary">Search</button>
+        <button type="button" id="rescrape-btn" class="btn secondary">Re-scrape listings</button>
+        <button type="button" id="chrome-scrape-btn" class="btn secondary">Scrape via my Chrome</button>
+        <button type="button" id="scrapfly-scrape-btn" class="btn secondary">Scrape via ScrapFly</button>
+      </form>
+      <p id="status-line" class="status-line" aria-live="polite"></p>
+    </section>
+
+    <section id="results" class="results"></section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,237 @@
+[
+  {
+    "id": "chanel-classic-flap-medium-black",
+    "url": "https://www.therealreal.com/products/chanel-classic-flap-medium-black",
+    "title": "Chanel Classic Double Flap Bag Medium",
+    "description": "Black quilted lambskin Classic Double Flap with gold-tone hardware, interlocking CC turn-lock, and chain-link shoulder strap. Authenticated luxury handbag in very good condition.",
+    "designer": "Chanel",
+    "category": "Handbags",
+    "price": 7850.0,
+    "currency": "USD",
+    "condition": "Very Good",
+    "size": "Medium",
+    "image_urls": [
+      "https://images.unsplash.com/photo-1584917865442-de89df76efd69?w=800&q=80",
+      "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=800&q=80"
+    ],
+    "metadata": {"color": "black", "material": "lambskin"}
+  },
+  {
+    "id": "hermes-birkin-30-togo-gold",
+    "url": "https://www.therealreal.com/products/hermes-birkin-30-togo-gold",
+    "title": "Hermès Birkin 30 Togo Gold",
+    "description": "Iconic Birkin 30 in Gold Togo leather with palladium hardware. Structured silhouette with top handles and flap closure. Highly sought-after investment piece.",
+    "designer": "Hermès",
+    "category": "Handbags",
+    "price": 22400.0,
+    "currency": "USD",
+    "condition": "Excellent",
+    "size": "30",
+    "image_urls": [
+      "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=800&q=80"
+    ],
+    "metadata": {"color": "gold", "material": "togo leather"}
+  },
+  {
+    "id": "louis-vuitton-neverfull-mm-damier",
+    "url": "https://www.therealreal.com/products/louis-vuitton-neverfull-mm-damier",
+    "title": "Louis Vuitton Neverfull MM Damier Ebene",
+    "description": "Spacious tote in Damier Ebene coated canvas with vachetta leather trim and side laces. Ideal everyday bag with open top and removable pochette.",
+    "designer": "Louis Vuitton",
+    "category": "Handbags",
+    "price": 1295.0,
+    "currency": "USD",
+    "condition": "Good",
+    "size": "MM",
+    "image_urls": [
+      "https://images.unsplash.com/photo-1591561954557-26941196b49e?w=800&q=80"
+    ],
+    "metadata": {"pattern": "damier ebene"}
+  },
+  {
+    "id": "cartier-love-bracelet-yellow-gold",
+    "url": "https://www.therealreal.com/products/cartier-love-bracelet-yellow-gold",
+    "title": "Cartier Love Bracelet 18K Yellow Gold",
+    "description": "Signature 18K yellow gold Love bracelet with screw motif and accompanying screwdriver. Timeless jewelry staple, size 17.",
+    "designer": "Cartier",
+    "category": "Jewelry",
+    "price": 5450.0,
+    "currency": "USD",
+    "condition": "Very Good",
+    "size": "17",
+    "image_urls": [
+      "https://images.unsplash.com/photo-1611591436355-35e461a4a6f2?w=800&q=80"
+    ],
+    "metadata": {"metal": "18k yellow gold"}
+  },
+  {
+    "id": "christian-dior-saddle-bag-oblique",
+    "url": "https://www.therealreal.com/products/christian-dior-saddle-bag-oblique",
+    "title": "Christian Dior Saddle Bag Oblique Canvas",
+    "description": "Revived icon in blue Dior Oblique jacquard with leather trim and antique gold hardware. Magnetic flap with CD charm detail.",
+    "designer": "Christian Dior",
+    "category": "Handbags",
+    "price": 2895.0,
+    "currency": "USD",
+    "condition": "Very Good",
+    "image_urls": [
+      "https://images.unsplash.com/photo-1566150900108-7bf1c0a0c3c3?w=800&q=80"
+    ],
+    "metadata": {"pattern": "oblique"}
+  },
+  {
+    "id": "prada-galleria-saffiano-black",
+    "url": "https://www.therealreal.com/products/prada-galleria-saffiano-black",
+    "title": "Prada Galleria Double Zip Saffiano Leather",
+    "description": "Structured double-zip tote in black Saffiano leather with top handles and detachable shoulder strap. Professional silhouette with logo plaque.",
+    "designer": "Prada",
+    "category": "Handbags",
+    "price": 1895.0,
+    "currency": "USD",
+    "condition": "Good",
+    "image_urls": [
+      "https://images.unsplash.com/photo-1594223274512-ad480373a6d3?w=800&q=80"
+    ],
+    "metadata": {"material": "saffiano leather"}
+  },
+  {
+    "id": "gucci-horsebit-loafer-leather",
+    "url": "https://www.therealreal.com/products/gucci-horsebit-loafer-leather",
+    "title": "Gucci Horsebit Loafer Black Leather",
+    "description": "Men's horsebit loafer in polished black leather with iconic gold-tone hardware. Classic Italian craftsmanship, size 42 EU.",
+    "designer": "Gucci",
+    "category": "Shoes",
+    "price": 495.0,
+    "currency": "USD",
+    "condition": "Very Good",
+    "size": "42 EU",
+    "image_urls": [
+      "https://images.unsplash.com/photo-1533867617858-e7b97e060509?w=800&q=80"
+    ],
+    "metadata": {"style": "loafer"}
+  },
+  {
+    "id": "rolex-submariner-date-steel",
+    "url": "https://www.therealreal.com/products/rolex-submariner-date-steel",
+    "title": "Rolex Submariner Date Stainless Steel",
+    "description": "Professional dive watch in Oystersteel with black Cerachrom bezel, Mercedes hands, and Oyster bracelet. Automatic movement with date display.",
+    "designer": "Rolex",
+    "category": "Watches",
+    "price": 14250.0,
+    "currency": "USD",
+    "condition": "Excellent",
+    "image_urls": [
+      "https://images.unsplash.com/photo-1523170335258-f5ed11844a49?w=800&q=80"
+    ],
+    "metadata": {"dial": "black", "bezel": "cerachrom"}
+  },
+  {
+    "id": "saint-laurent-loulou-puffer-small",
+    "url": "https://www.therealreal.com/products/saint-laurent-loulou-puffer-small",
+    "title": "Saint Laurent Loulou Puffer Small",
+    "description": "Quilted leather chain bag with YSL monogram and magnetic flap. Soft puffer construction in ivory leather with antique gold hardware.",
+    "designer": "Saint Laurent",
+    "category": "Handbags",
+    "price": 1650.0,
+    "currency": "USD",
+    "condition": "Very Good",
+    "size": "Small",
+    "image_urls": [
+      "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=800&q=80"
+    ],
+    "metadata": {"color": "ivory"}
+  },
+  {
+    "id": "bottega-veneta-cassette-intrecciato",
+    "url": "https://www.therealreal.com/products/bottega-veneta-cassette-intrecciato",
+    "title": "Bottega Veneta Cassette Bag Intrecciato",
+    "description": "Padded intrecciato Nappa crossbody in parakeet green with chunky gold-tone chain strap. Statement pillow silhouette from the Tom Ford era revival.",
+    "designer": "Bottega Veneta",
+    "category": "Handbags",
+    "price": 2450.0,
+    "currency": "USD",
+    "condition": "Excellent",
+    "image_urls": [
+      "https://images.unsplash.com/photo-1584917865442-de89df76efd69?w=800&q=80"
+    ],
+    "metadata": {"color": "parakeet", "technique": "intrecciato"}
+  },
+  {
+    "id": "valentino-rockstud-pump-nude",
+    "url": "https://www.therealreal.com/products/valentino-rockstud-pump-nude",
+    "title": "Valentino Rockstud Pump Nude Patent",
+    "description": "Pointed-toe pump in nude patent leather with signature pyramid studs along the trim. Stiletto heel, size 38.5 EU.",
+    "designer": "Valentino",
+    "category": "Shoes",
+    "price": 575.0,
+    "currency": "USD",
+    "condition": "Good",
+    "size": "38.5 EU",
+    "image_urls": [
+      "https://images.unsplash.com/photo-1543163521-1bf539c55dd3?w=800&q=80"
+    ],
+    "metadata": {"heel": "stiletto"}
+  },
+  {
+    "id": "celine-triomphe-aviator-sunglasses",
+    "url": "https://www.therealreal.com/products/celine-triomphe-aviator-sunglasses",
+    "title": "Celine Triomphe Aviator Sunglasses",
+    "description": "Metal aviator frames with gradient lenses and Triomphe temple detail. UV protection, includes case and authenticity card.",
+    "designer": "Celine",
+    "category": "Accessories",
+    "price": 325.0,
+    "currency": "USD",
+    "condition": "Very Good",
+    "image_urls": [
+      "https://images.unsplash.com/photo-1572635196233-224f5f298d8b?w=800&q=80"
+    ],
+    "metadata": {"style": "aviator"}
+  },
+  {
+    "id": "balenciaga-triple-s-sneaker-white",
+    "url": "https://www.therealreal.com/products/balenciaga-triple-s-sneaker-white",
+    "title": "Balenciaga Triple S Sneaker White Multi",
+    "description": "Chunky multi-layered sole sneaker in white and neutral tones with distressed leather and mesh upper. Size 41 EU, streetwear grail.",
+    "designer": "Balenciaga",
+    "category": "Shoes",
+    "price": 695.0,
+    "currency": "USD",
+    "condition": "Good",
+    "size": "41 EU",
+    "image_urls": [
+      "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=800&q=80"
+    ],
+    "metadata": {"style": "sneaker"}
+  },
+  {
+    "id": "fendi-baguette-embroidered",
+    "url": "https://www.therealreal.com/products/fendi-baguette-embroidered",
+    "title": "Fendi Baguette Embroidered FF Motif",
+    "description": "Y2K icon with embroidered FF logo pattern, flap closure, and short shoulder strap. Silk and sequin embellishment on structured base.",
+    "designer": "Fendi",
+    "category": "Handbags",
+    "price": 2195.0,
+    "currency": "USD",
+    "condition": "Very Good",
+    "image_urls": [
+      "https://images.unsplash.com/photo-1566150900108-7bf1c0a0c3c3?w=800&q=80"
+    ],
+    "metadata": {"era": "y2k"}
+  },
+  {
+    "id": "tom-ford-shelby-satin-gown",
+    "url": "https://www.therealreal.com/products/tom-ford-shelby-satin-gown",
+    "title": "Tom Ford Shelby Satin Evening Gown",
+    "description": "Floor-length silk satin gown with plunging neckline and open back. Bias cut with subtle train, size 4. Red carpet ready evening wear.",
+    "designer": "Tom Ford",
+    "category": "Clothing",
+    "price": 1895.0,
+    "currency": "USD",
+    "condition": "Excellent",
+    "size": "4",
+    "image_urls": [
+      "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=800&q=80"
+    ],
+    "metadata": {"occasion": "evening"}
+  }
+]
