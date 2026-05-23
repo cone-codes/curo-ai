@@ -52,8 +52,18 @@ def main() -> int:
             p = await fetch_page(sample, auto_scroll=False)
             print(f"  success={p.success} status={p.status_code} cost={p.api_cost}")
             if p.html:
-                reason = parse_failure_reason(p.html, sample)
-                print(f"  parse check: {reason or 'ok (would parse)'}")
+                from backend.app.chrome_bridge.parser import parse_product_html
+
+                try:
+                    listing = parse_product_html(p.html, sample)
+                except Exception as exc:
+                    print(f"  parse error: {exc}")
+                    return
+                if listing:
+                    print(f"  parse check: ok — {listing.title[:60]}")
+                else:
+                    reason = parse_failure_reason(p.html, sample)
+                    print(f"  parse check: {reason}")
 
     asyncio.run(probe())
     return 0

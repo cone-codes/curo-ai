@@ -127,6 +127,47 @@ def _images_from_node(data: dict) -> list[str]:
     return images[:12]
 
 
+
+
+def _coerce_text_field(value: Any) -> str | None:
+    """Normalize TRR GraphQL fields (e.g. category: {name: ...}) to plain strings."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        s = value.strip()
+        return s or None
+    if isinstance(value, (int, float, bool)):
+        return str(value)
+    if isinstance(value, dict):
+        for key in (
+            "name",
+            "title",
+            "label",
+            "displayName",
+            "display_name",
+            "path",
+            "slug",
+            "value",
+        ):
+            if key in value and value[key] is not None:
+                coerced = _coerce_text_field(value[key])
+                if coerced:
+                    return coerced
+        for key in ("breadcrumb", "breadcrumbs", "categories", "items"):
+            if key in value:
+                coerced = _coerce_text_field(value[key])
+                if coerced:
+                    return coerced
+        return None
+    if isinstance(value, list):
+        parts: list[str] = []
+        for item in value:
+            coerced = _coerce_text_field(item)
+            if coerced:
+                parts.append(coerced)
+        return " > ".join(parts) if parts else None
+    return None
+
 def _listing_from_payload(data: dict, url: str) -> Listing | None:
     title = (data.get("title") or data.get("name") or "").strip()
     if not title:
@@ -158,16 +199,22 @@ def _listing_from_payload(data: dict, url: str) -> Listing | None:
     if product_url and not str(product_url).startswith("http"):
         product_url = urljoin(BASE_URL, str(product_url))
 
+    category = _coerce_text_field(
+        data.get("category") or data.get("taxonomy") or data.get("category_name")
+    )
+    condition = _coerce_text_field(data.get("condition"))
+    size = _coerce_text_field(data.get("size"))
+
     return Listing(
         id=slug,
         url=str(product_url),
         title=title[:500],
         description=str(description)[:8000],
         designer=str(designer) if designer else None,
-        category=data.get("category") or data.get("taxonomy"),
+        category=category,
         price=float(price) if price is not None else None,
-        condition=data.get("condition"),
-        size=data.get("size"),
+        condition=condition,
+        size=size,
         image_urls=_images_from_node(data),
         metadata={"source": "chrome_cdp_html"},
         scraped_at=datetime.now(timezone.utc),
