@@ -7,7 +7,6 @@ from pathlib import Path
 
 from backend.app.config import settings
 from backend.app.scraper.cookies import COOKIES_PATH, load_cookie_file, save_cookies_to_file
-from backend.app.scraper.login import ensure_logged_in
 from backend.app.scraper.stealth import STEALTH_INIT_SCRIPT
 from backend.app.session_state import mark_session_authenticated
 
@@ -70,6 +69,8 @@ async def interactive_login_for_scrapfly(*, force: bool = False) -> tuple[bool, 
         )
         page = context.pages[0] if context.pages else await context.new_page()
         await page.add_init_script(STEALTH_INIT_SCRIPT)
+
+        from backend.app.scraper.login import ensure_logged_in
 
         ok, msg = await ensure_logged_in(
             page,

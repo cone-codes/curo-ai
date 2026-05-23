@@ -7,7 +7,6 @@ SEED_EXTRA_PATH = ROOT_DIR / "data" / "seed_listings_extra.json"
 
 from backend.app.models import Listing, ScrapeStatus
 from backend.app.chrome_bridge import run_chrome_crawl
-from backend.app.scrapfly_bridge import run_scrapfly_crawl
 from backend.app.scraper.playwright_scraper import ScrapeRunResult, scrape_listings_async
 from backend.app.session_state import auth_status, is_session_authenticated
 from backend.app.storage import count_listings, existing_ids, load_seed_from_file, upsert_many
@@ -153,6 +152,8 @@ class ScrapeService:
 
     async def scrape_via_scrapfly(self) -> ScrapeStatus:
         known = existing_ids()
+        from backend.app.scrapfly_bridge.crawler import run_scrapfly_crawl
+
         crawl = await run_scrapfly_crawl()
         if not crawl.listings:
             return ScrapeStatus(

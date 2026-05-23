@@ -1,3 +1,3 @@
-from backend.app.scraper.service import ScrapeService
+"""Scraper package. Import ScrapeService from backend.app.scraper.service."""
 
-__all__ = ["ScrapeService"]
+__all__: list[str] = []

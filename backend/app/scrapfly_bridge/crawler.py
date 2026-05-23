@@ -18,8 +18,6 @@ from backend.app.scrapfly_bridge.client import (
     ScrapflyNotConfiguredError,
     fetch_page,
 )
-from backend.app.scrapfly_bridge.login import interactive_login_for_scrapfly
-
 logger = logging.getLogger(__name__)
 
 
@@ -74,6 +72,8 @@ async def run_scrapfly_crawl(
             raise ScrapflyNotConfiguredError(
                 "Set SCRAPFLY_API_KEY in .env — get a key at https://scrapfly.io/dashboard"
             )
+
+        from backend.app.scrapfly_bridge.login import interactive_login_for_scrapfly
 
         login_ok, login_msg = await interactive_login_for_scrapfly()
         if not login_ok:
