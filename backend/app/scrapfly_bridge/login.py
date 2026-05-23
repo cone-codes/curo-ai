@@ -6,7 +6,12 @@ import logging
 from pathlib import Path
 
 from backend.app.config import settings
-from backend.app.scraper.cookies import COOKIES_PATH, load_cookie_file, save_cookies_to_file
+from backend.app.scraper.cookies import (
+    COOKIES_PATH,
+    describe_cookie_file,
+    has_usable_trr_cookies,
+    save_cookies_to_file,
+)
 from backend.app.scraper.stealth import STEALTH_INIT_SCRIPT
 from backend.app.session_state import mark_session_authenticated
 
@@ -20,14 +25,11 @@ def cookie_file_path() -> Path:
 
 
 def has_saved_cookies(min_count: int = 3) -> bool:
-    cookies = load_cookie_file(cookie_file_path())
-    if len(cookies) < min_count:
-        return False
-    for c in cookies:
-        domain = str(c.get("domain", ""))
-        if "therealreal.com" in domain:
-            return True
-    return False
+    return has_usable_trr_cookies(cookie_file_path(), min_count=min_count)
+
+
+def cookie_file_status() -> str:
+    return describe_cookie_file(cookie_file_path())
 
 
 async def interactive_login_for_scrapfly(*, force: bool = False) -> tuple[bool, str]:

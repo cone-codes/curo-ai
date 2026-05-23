@@ -31,6 +31,8 @@ ScrapFly runs in the cloud and cannot show you a sign-in window. **Export cookie
 
 ## File format
 
+Cookie-Editor exports often use `"host": ".therealreal.com"` instead of `"domain"` — both work.
+
 JSON array (Playwright-style), for example:
 
 ```json

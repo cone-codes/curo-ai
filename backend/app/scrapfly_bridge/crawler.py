@@ -74,22 +74,30 @@ async def run_scrapfly_crawl(
             )
 
         if settings.scrapfly_use_cookies_file:
-            from backend.app.scrapfly_bridge.login import has_saved_cookies, cookie_file_path
+            from backend.app.scrapfly_bridge.login import (
+                cookie_file_path,
+                cookie_file_status,
+                has_saved_cookies,
+            )
 
+            path = cookie_file_path()
+            status = cookie_file_status()
             if not has_saved_cookies():
-                path = cookie_file_path()
                 result.message = "cookies_required_export_to_data/trr_cookies.json"
                 print(
                     "\nScrapFly needs TRR login cookies.\n"
+                    f"  Cookie file: {path}\n"
+                    f"  Status: {status}\n"
                     f"  1. Sign in at https://www.therealreal.com/ in Chrome\n"
-                    f"  2. Export cookies (Cookie-Editor extension) to:\n"
-                    f"     {path}\n"
+                    f"  2. Export cookies (Cookie-Editor → Export JSON) to the path above\n"
                     "  3. Run this again\n"
+                    '  Tip: Cookie-Editor uses "host" not "domain" — that is supported now.\n'
                     "  See docs/SCRAPFLY.md or data/trr_cookies.README.md\n",
                     flush=True,
                 )
-                result.errors.append(result.message)
+                result.errors.append(f"{result.message}:{status}")
                 return result
+            logger.info("Cookie file OK (%s)", status)
 
         if product_urls is None:
             product_urls = await _discover_product_urls()
